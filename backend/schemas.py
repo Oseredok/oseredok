@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 class OrganizationResponse(BaseModel):
     organization_id: str
@@ -8,3 +8,11 @@ class OrganizationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UserRegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class UserRegisterResponse(BaseModel):
+    userId: str
+    email: str
