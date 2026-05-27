@@ -22,7 +22,7 @@ class UserRegisterResponse(BaseModel):
 
 
 class UserLoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 

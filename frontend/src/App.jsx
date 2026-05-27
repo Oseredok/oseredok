@@ -87,6 +87,47 @@ function OrgCard({ org, idx }) {
   );
 }
 
+
+function Field({
+  field,
+  label,
+  type = "text",
+  inputRef,
+  form,
+  setForm,
+  errors,
+  setErrors,
+  onKeyDown,
+}) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+        {label}
+      </label>
+
+      <input
+      ref={inputRef}
+      type={type}
+      value={form[field]}
+      onChange={(e) => {
+        setForm(f => ({ ...f, [field]: e.target.value }));
+        if (errors[field]) setErrors(er => ({ ...er, [field]: "" }));
+      }}
+      onKeyDown={onKeyDown}
+      autoComplete="off"
+      spellCheck={false}
+      style={{
+      width: "100%",
+      padding: "12px 16px",
+      borderRadius: 12,
+      border: errors[field] ? "1px solid red" : "1px solid #ddd",
+    }}
+/>
+    </div>
+  );
+}
+
+
 function Modal({ page, onClose, onSuccess }) {
   const [form, setForm] = useState({ email: "", password: "", confirm: "" });
   const [errors, setErrors] = useState({});
@@ -154,35 +195,7 @@ function Modal({ page, onClose, onSuccess }) {
 
   const handleKey = (e) => { if (e.key === "Enter" && isValid) handleSubmit(); };
 
-  const Field = ({ field, label, type = "text", inputRef }) => (
-    <div style={{ marginBottom: 18 }}>
-      <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 6, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-        {label}
-      </label>
-      <input
-        ref={inputRef}
-        type={type}
-        placeholder={type === "email" ? "ім'я@ukma.edu.ua" : "••••••••"}
-        value={form[field]}
-        onChange={(e) => {
-          setForm(f => ({ ...f, [field]: e.target.value }));
-          if (errors[field]) setErrors(er => ({ ...er, [field]: "" }));
-        }}
-        onKeyDown={handleKey}
-        style={{
-          width: "100%", padding: "12px 16px", borderRadius: 12, fontSize: 15,
-          border: errors[field] ? "1.5px solid #ef4444" : "1.5px solid #e2e8f0",
-          outline: "none", boxSizing: "border-box",
-          background: "#f8fafc", color: "#0f172a",
-          transition: "border-color 0.15s",
-          fontFamily: "inherit",
-        }}
-        onFocus={e => e.target.style.borderColor = errors[field] ? "#ef4444" : "#1a56db"}
-        onBlur={e => e.target.style.borderColor = errors[field] ? "#ef4444" : "#e2e8f0"}
-      />
-      {errors[field] && <p style={{ margin: "5px 0 0", fontSize: 12, color: "#ef4444" }}>{errors[field]}</p>}
-    </div>
-  );
+  
 
   return (
     <div
@@ -224,9 +237,39 @@ function Modal({ page, onClose, onSuccess }) {
           </p>
         </div>
 
-        <Field field="email" label="Email" type="email" inputRef={emailRef} />
-        <Field field="password" label="Пароль" type="password" />
-        {page === "register" && <Field field="confirm" label="Підтвердження паролю" type="password" />}
+        <Field
+        field="email"
+        label="Email"
+        type="email"
+        inputRef={emailRef}
+        form={form}
+        setForm={setForm}
+        errors={errors}
+        setErrors={setErrors}
+        onKeyDown={handleKey}
+        />
+        <Field
+  field="password"
+  label="Пароль"
+  type="password"
+  form={form}
+  setForm={setForm}
+  errors={errors}
+  setErrors={setErrors}
+  onKeyDown={handleKey}
+/>
+        {page === "register" && (
+          <Field
+            field="confirm"
+            label="Підтвердження паролю"
+            type="password"
+            form={form}
+            setForm={setForm}
+            errors={errors}
+            setErrors={setErrors}
+            onKeyDown={handleKey}
+          />
+        )}
 
         {serverMsg && (
           <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fef2f2", border: "1px solid #fecaca", marginBottom: 16 }}>

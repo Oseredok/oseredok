@@ -24,6 +24,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+SECRET_KEY = os.getenv("JWT_SECRET", "change_me_in_production")
+ALGORITHM = "HS256"
+TOKEN_EXPIRE_HOURS = 24
+
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -31,11 +35,6 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
-
-
-SECRET_KEY = os.getenv("JWT_SECRET", "change_me_in_production")
-ALGORITHM = "HS256"
-TOKEN_EXPIRE_HOURS = 24
 
 
 def create_token(user_id: str, email: str) -> str:
@@ -72,16 +71,14 @@ def register(body: UserRegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=409, detail="Email вже зареєстровано")
 
-    hashed = hash_password(body.password)
     new_user = User(
         user_id=str(uuid.uuid4()),
         email=body.email,
-        password_hash=hashed
+        password_hash=hash_password(body.password)
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-
     return UserRegisterResponse(userId=new_user.user_id, email=new_user.email)
 
 
