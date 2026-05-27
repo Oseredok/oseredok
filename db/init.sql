@@ -15,3 +15,14 @@ INSERT INTO organizations (organization_id, name, description, category, contact
 VALUES
 (UUID(), 'Debate Club', 'Student debate organization', 'Debates', 'debate@naukma.edu.ua'),
 (UUID(), 'IT Society', 'Community for IT students', 'IT', 'it@naukma.edu.ua');
+
+
+
+CREATE TABLE IF NOT EXISTS users (
+    user_id CHAR(36) PRIMARY KEY,
+    full_name VARCHAR(255),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
