@@ -1,8 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
 .env
-.DS_Store
+venv/
+.venv/
+*.egg-info/
+
+# Node / React
+node_modules/
+.env.local
+.env.production
+
+# Build
 dist/
 build/
+.vite/
+
+# Загальне
+.DS_Store
 *.log
 .vscode/
 .idea/
-node_modules/
+
+# MySQL
+*.sql.bak
