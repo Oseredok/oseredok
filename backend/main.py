@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
+import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta
 import uuid
@@ -24,7 +24,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode(), hashed.encode())
+
 
 SECRET_KEY = os.getenv("JWT_SECRET", "change_me_in_production")
 ALGORITHM = "HS256"
@@ -65,7 +72,7 @@ def register(body: UserRegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=409, detail="Email вже зареєстровано")
 
-    hashed = pwd_context.hash(body.password)
+    hashed = hash_password(body.password)
     new_user = User(
         user_id=str(uuid.uuid4()),
         email=body.email,
@@ -81,7 +88,7 @@ def register(body: UserRegisterRequest, db: Session = Depends(get_db)):
 @app.post("/auth/login", response_model=TokenResponse)
 def login(body: UserLoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email).first()
-    if not user or not pwd_context.verify(body.password, user.password_hash):
+    if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Невірний email або пароль")
 
     token = create_token(user.user_id, user.email)
