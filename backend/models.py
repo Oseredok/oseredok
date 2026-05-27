@@ -1,3 +1,4 @@
+
 from sqlalchemy import Column, String, Text, TIMESTAMP
 from database import Base
 
@@ -10,4 +11,14 @@ class Organization(Base):
     category = Column(String(100))
     logo_url = Column(String(255))
     contact_email = Column(String(255))
+    created_at = Column(TIMESTAMP)
+
+class User(Base):
+    __tablename__ = "users"
+
+    user_id = Column(String(36), primary_key=True)
+    full_name = Column(String(255))
+    email = Column(String(255), nullable=False, unique=True)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(50))
     created_at = Column(TIMESTAMP)
