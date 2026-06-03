@@ -460,7 +460,7 @@ function OrganizationsPage({ onNavigateToOrg }) {
           fontFamily: "'Playfair Display', serif", letterSpacing: "-0.02em",
           marginBottom: 8, textAlign: "left",
         }}>
-          Організації
+         Події 
         </h1>
         <p style={{ fontSize: 15, color: "#64748b", textAlign: "left" }}>
           Знайди студентську організацію за інтересами
@@ -560,7 +560,7 @@ function OrganizationsPage({ onNavigateToOrg }) {
         <div style={{ textAlign: "center", padding: "80px 20px", animation: "fadeUp 0.4s ease both" }}>
 
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#334155", marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>
-            Не вдалося завантажити організації
+            Не вдалося завантажити події
           </h3>
           <p style={{ fontSize: 14, color: "#94a3b8", marginBottom: 24 }}>
             Перевір чи запущений бекенд на <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>http://127.0.0.1:8000</code>
@@ -707,7 +707,7 @@ export default function App() {
                 cursor: "pointer", transition: "all 0.15s",
               }}
             >
-              Організації
+              Події
             </button>
 
             {user ? (
@@ -792,7 +792,7 @@ export default function App() {
                   onMouseEnter={e => e.currentTarget.style.transform = "scale(1.03)"}
                   onMouseLeave={e => e.currentTarget.style.transform = "none"}
                 >
-                  Переглянути організації →
+                  Переглянути події →
                 </button>
               </div>
 
