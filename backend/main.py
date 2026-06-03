@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import bcrypt
@@ -52,14 +52,28 @@ def root():
 
 
 @app.get("/organizations")
-def get_organizations(db: Session = Depends(get_db)):
-    organizations = db.query(Organization).all()
+def get_organizations(
+    search: str | None = Query(default=None, description="Пошук за назвою"),
+    category: str | None = Query(default=None, description="Фільтр за категорією"),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Organization)
+
+    if search:
+        query = query.filter(Organization.name.ilike(f"%{search}%"))
+
+    if category:
+        query = query.filter(Organization.category == category)
+
+    organizations = query.all()
     return [
         {
             "organization_id": org.organization_id,
             "name": org.name,
             "description": org.description,
-            "category": org.category
+            "category": org.category,
+            "logo_url": org.logo_url,
+            "contact_email": org.contact_email,
         }
         for org in organizations
     ]
