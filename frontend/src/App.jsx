@@ -56,7 +56,6 @@ function CategoryPill({ cat, small }) {
   );
 }
 
-// ── Skeleton card ──
 function SkeletonCard() {
   return (
     <div style={{
@@ -77,7 +76,6 @@ function SkeletonCard() {
   );
 }
 
-// ── Org card ──
 function OrgCard({ org, idx, onNavigate }) {
   const [hovered, setHovered] = useState(false);
   const color = categoryColors[org.category] || categoryColors.default;
@@ -99,9 +97,7 @@ function OrgCard({ org, idx, onNavigate }) {
         transition: "all 0.2s cubic-bezier(.4,0,.2,1)",
         cursor: "pointer",
         transform: hovered ? "translateY(-3px)" : "none",
-        boxShadow: hovered
-          ? `0 8px 32px ${color}20`
-          : "0 1px 4px rgba(0,0,0,0.05)",
+        boxShadow: hovered ? `0 8px 32px ${color}20` : "0 1px 4px rgba(0,0,0,0.05)",
         animationDelay: `${idx * 60}ms`,
         animation: "fadeUp 0.45s ease both",
         display: "flex",
@@ -109,7 +105,6 @@ function OrgCard({ org, idx, onNavigate }) {
         outline: "none",
       }}
     >
-      {/* Top row: logo + category */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
         <div style={{
           width: 52, height: 52, borderRadius: 14, flexShrink: 0,
@@ -126,7 +121,6 @@ function OrgCard({ org, idx, onNavigate }) {
         {org.category && <CategoryPill cat={org.category} small />}
       </div>
 
-      {/* Name */}
       <h3 style={{
         margin: "0 0 10px", fontSize: 18, fontWeight: 700, color: "#0f172a",
         fontFamily: "'Playfair Display', serif", lineHeight: 1.3,
@@ -134,7 +128,6 @@ function OrgCard({ org, idx, onNavigate }) {
         {org.name}
       </h3>
 
-      {/* Description — 2 lines max */}
       <p style={{
         margin: "0 0 20px", fontSize: 14, color: "#64748b", lineHeight: 1.65,
         display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
@@ -143,7 +136,6 @@ function OrgCard({ org, idx, onNavigate }) {
         {org.description || "Студентська організація НаУКМА"}
       </p>
 
-      {/* Arrow link */}
       <div style={{
         display: "flex", alignItems: "center", gap: 6,
         fontSize: 12, fontWeight: 700,
@@ -164,12 +156,12 @@ function OrgCard({ org, idx, onNavigate }) {
   );
 }
 
-// ── Auth Field ──
 function Field({ field, label, type = "text", inputRef, form, setForm, errors, setErrors, onKeyDown }) {
   const placeholders = {
     email: "ім'я@ukma.edu.ua",
     password: "мінімум 8 символів",
     confirm: "повторіть пароль",
+    full_name: "Ім'я Прізвище",
   };
   return (
     <div style={{ marginBottom: 18 }}>
@@ -204,9 +196,8 @@ function Field({ field, label, type = "text", inputRef, form, setForm, errors, s
   );
 }
 
-// ── Auth Modal ──
 function Modal({ page, onClose, onSuccess }) {
-  const [form, setForm] = useState({ email: "", password: "", confirm: "" });
+  const [form, setForm] = useState({ email: "", password: "", confirm: "", full_name: "" });
   const [errors, setErrors] = useState({});
   const [serverMsg, setServerMsg] = useState("");
   const [loading, setLoading] = useState(false);
@@ -214,7 +205,7 @@ function Modal({ page, onClose, onSuccess }) {
 
   useEffect(() => {
     setTimeout(() => emailRef.current?.focus(), 80);
-    setForm({ email: "", password: "", confirm: "" });
+    setForm({ email: "", password: "", confirm: "", full_name: "" });
     setErrors({});
     setServerMsg("");
   }, [page]);
@@ -245,7 +236,11 @@ function Modal({ page, onClose, onSuccess }) {
       const res = await fetch(`${API}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, password: form.password }),
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          ...(page === "register" && { full_name: form.full_name }),
+        }),
       });
       const data = await res.json();
       if (res.status === 201 || res.status === 200) {
@@ -300,6 +295,9 @@ function Modal({ page, onClose, onSuccess }) {
           </p>
         </div>
 
+        {page === "register" && (
+          <Field field="full_name" label="Ім'я та прізвище" form={form} setForm={setForm} errors={errors} setErrors={setErrors} onKeyDown={onKeyDown} />
+        )}
         <Field field="email" label="Email" inputRef={emailRef} form={form} setForm={setForm} errors={errors} setErrors={setErrors} onKeyDown={onKeyDown} />
         <Field field="password" label="Пароль" type="password" form={form} setForm={setForm} errors={errors} setErrors={setErrors} onKeyDown={onKeyDown} />
         {page === "register" && (
@@ -341,7 +339,6 @@ function Modal({ page, onClose, onSuccess }) {
   );
 }
 
-// ── Organization Detail Page ──
 function OrgDetailPage({ org, onBack }) {
   const color = categoryColors[org.category] || categoryColors.default;
   return (
@@ -412,17 +409,15 @@ function OrgDetailPage({ org, onBack }) {
   );
 }
 
-// ── Organizations List Page ──
 function OrganizationsPage({ onNavigateToOrg }) {
   const [allOrgs, setAllOrgs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [hasLoaded, setHasLoaded] = useState(false); // розрізняємо "ще не було запиту" від "запит завершено"
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [activeCategory, setActiveCategory] = useState("Всі");
   const debouncedSearch = useDebounce(searchInput, 300);
 
-  // Fetch with search + category params
   useEffect(() => {
     setLoading(true);
     setError(false);
@@ -437,7 +432,6 @@ function OrganizationsPage({ onNavigateToOrg }) {
       .catch(() => { setError(true); setLoading(false); setHasLoaded(true); });
   }, [debouncedSearch, activeCategory]);
 
-  // Fetch all orgs once to get all categories for filter buttons
   const [allCategories, setAllCategories] = useState([]);
   useEffect(() => {
     fetch(`${API}/organizations`)
@@ -453,30 +447,25 @@ function OrganizationsPage({ onNavigateToOrg }) {
 
   return (
     <div>
-      {/* Page header */}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{
           fontSize: "clamp(28px, 5vw, 40px)", fontWeight: 800, color: "#0f172a",
           fontFamily: "'Playfair Display', serif", letterSpacing: "-0.02em",
           marginBottom: 8, textAlign: "left",
         }}>
-         Події 
+          Події
         </h1>
         <p style={{ fontSize: 15, color: "#64748b", textAlign: "left" }}>
           Знайди студентську організацію за інтересами
         </p>
       </div>
 
-      {/* Search + filter bar */}
       <div style={{ marginBottom: 28, display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Search input */}
         <div style={{ position: "relative" }}>
           <div style={{
             position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
             color: "#94a3b8", fontSize: 16, pointerEvents: "none",
-          }}>
-            ⌕
-          </div>
+          }}>⌕</div>
           <input
             type="text"
             placeholder="Пошук за назвою..."
@@ -490,14 +479,8 @@ function OrganizationsPage({ onNavigateToOrg }) {
               transition: "border-color 0.15s, box-shadow 0.15s",
               boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
             }}
-            onFocus={e => {
-              e.target.style.borderColor = "#1a56db";
-              e.target.style.boxShadow = "0 0 0 3px rgba(26,86,219,0.1)";
-            }}
-            onBlur={e => {
-              e.target.style.borderColor = "#e2e8f0";
-              e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
-            }}
+            onFocus={e => { e.target.style.borderColor = "#1a56db"; e.target.style.boxShadow = "0 0 0 3px rgba(26,86,219,0.1)"; }}
+            onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)"; }}
           />
           {searchInput && (
             <button
@@ -511,7 +494,6 @@ function OrganizationsPage({ onNavigateToOrg }) {
           )}
         </div>
 
-        {/* Category filter pills */}
         {categories.length > 1 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {categories.map(cat => {
@@ -530,16 +512,13 @@ function OrganizationsPage({ onNavigateToOrg }) {
                     color: isActive ? "#fff" : "#64748b",
                     boxShadow: isActive ? `0 4px 12px ${color}30` : "none",
                   }}
-                >
-                  {cat}
-                </button>
+                >{cat}</button>
               );
             })}
           </div>
         )}
       </div>
 
-      {/* Results count */}
       {!loading && (
         <div style={{ marginBottom: 20, fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
           {allOrgs.length > 0
@@ -548,17 +527,14 @@ function OrganizationsPage({ onNavigateToOrg }) {
         </div>
       )}
 
-      {/* Loading skeleton */}
       {loading && (
         <div className="orgs-grid">
           {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
         </div>
       )}
 
-      {/* Error state */}
       {!loading && error && (
         <div style={{ textAlign: "center", padding: "80px 20px", animation: "fadeUp 0.4s ease both" }}>
-
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#334155", marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>
             Не вдалося завантажити події
           </h3>
@@ -568,13 +544,8 @@ function OrganizationsPage({ onNavigateToOrg }) {
         </div>
       )}
 
-      {/* Empty state — тільки якщо запит завершено успішно але результатів немає */}
       {!loading && !error && hasLoaded && allOrgs.length === 0 && (
-        <div style={{
-          textAlign: "center", padding: "80px 20px",
-          animation: "fadeUp 0.4s ease both",
-        }}>
-
+        <div style={{ textAlign: "center", padding: "80px 20px", animation: "fadeUp 0.4s ease both" }}>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#334155", marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>
             Організацій не знайдено
           </h3>
@@ -596,7 +567,6 @@ function OrganizationsPage({ onNavigateToOrg }) {
         </div>
       )}
 
-      {/* Cards grid */}
       {!loading && allOrgs.length > 0 && (
         <div className="orgs-grid">
           {allOrgs.map((org, i) => (
@@ -608,15 +578,14 @@ function OrganizationsPage({ onNavigateToOrg }) {
   );
 }
 
-// ── Main App ──
 export default function App() {
-  const [page, setPage] = useState(null); // null | "login" | "register"
+  const [page, setPage] = useState(null);
   const [user, setUser] = useState(() => {
     const token = localStorage.getItem("token");
     const email = localStorage.getItem("email");
     return token && email ? { token, email } : null;
   });
-  const [view, setView] = useState("home"); // "home" | "organizations" | "org-detail"
+  const [view, setView] = useState("home");
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [orgsCount, setOrgsCount] = useState(0);
   const orgCount = useCount(orgsCount);
@@ -663,13 +632,11 @@ export default function App() {
         ::-webkit-scrollbar-thumb { background: #c7d7f5; border-radius: 3px; }
       `}</style>
 
-      {/* Background blobs */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
         <div style={{ position: "absolute", top: -120, right: -120, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, #bfdbfe 0%, transparent 70%)", opacity: 0.6 }} />
         <div style={{ position: "absolute", bottom: -80, left: -80, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, #dbeafe 0%, transparent 70%)", opacity: 0.5 }} />
       </div>
 
-      {/* NAVBAR — sticky, full width */}
       <div style={{
         position: "sticky", top: 0, zIndex: 50,
         background: "rgba(240,246,255,0.85)", backdropFilter: "blur(12px)",
@@ -696,7 +663,6 @@ export default function App() {
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Nav link to organizations */}
             <button
               onClick={() => { setView("organizations"); setSelectedOrg(null); }}
               style={{
@@ -753,8 +719,6 @@ export default function App() {
       </div>
 
       <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "40px 24px 80px" }}>
-
-        {/* ── HOME VIEW ── */}
         {view === "home" && (
           <>
             <div style={{ textAlign: "center", marginBottom: 64, animation: "fadeUp 0.6s ease both" }}>
@@ -837,26 +801,17 @@ export default function App() {
           </>
         )}
 
-        {/* ── ORGANIZATIONS LIST VIEW ── */}
         {view === "organizations" && (
           <OrganizationsPage onNavigateToOrg={navigateToOrg} />
         )}
 
-        {/* ── ORG DETAIL VIEW ── */}
         {view === "org-detail" && selectedOrg && (
-          <OrgDetailPage
-            org={selectedOrg}
-            onBack={() => setView("organizations")}
-          />
+          <OrgDetailPage org={selectedOrg} onBack={() => setView("organizations")} />
         )}
       </div>
 
       {page && (
-        <Modal
-          page={page}
-          onClose={() => setPage(null)}
-          onSuccess={handleSuccess}
-        />
+        <Modal page={page} onClose={() => setPage(null)} onSuccess={handleSuccess} />
       )}
     </>
   );

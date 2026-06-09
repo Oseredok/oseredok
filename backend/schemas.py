@@ -14,6 +14,7 @@ class OrganizationResponse(BaseModel):
 class UserRegisterRequest(BaseModel):
     email: EmailStr
     password: str
+    full_name: str | None = None
 
 
 class UserRegisterResponse(BaseModel):

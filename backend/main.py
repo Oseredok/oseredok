@@ -88,7 +88,10 @@ def register(body: UserRegisterRequest, db: Session = Depends(get_db)):
     new_user = User(
         user_id=str(uuid.uuid4()),
         email=body.email,
-        password_hash=hash_password(body.password)
+        full_name=body.full_name,
+        password_hash=hash_password(body.password),
+        role="student",
+        created_at=datetime.utcnow()
     )
     db.add(new_user)
     db.commit()
