@@ -1,0 +1,362 @@
+{
+  "info": {
+    "name": "Осередок API",
+    "_postman_id": "oseredok-collection-v1",
+    "description": "Колекція для тестування API проєкту «Осередок» (НаУКМА). Покриває реєстрацію, логін та список організацій.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Реєстрація — успішна",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@ukma.edu.ua\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Відповідь містить userId та email', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('userId');",
+                  "  pm.expect(json).to.have.property('email');",
+                  "});",
+                  "pm.test('Відповідь НЕ містить password', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.not.have.property('password');",
+                  "  pm.expect(json).to.not.have.property('password_hash');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Реєстрація — дублікат email (409)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@ukma.edu.ua\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('Повідомлення про дублікат email', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.detail).to.include('вже зареєстровано');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Реєстрація — не @ukma.edu.ua (422)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hacker@gmail.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 422 Unprocessable Entity', () => pm.response.to.have.status(422));",
+                  "pm.test('Помилка валідації домену', () => {",
+                  "  const text = pm.response.text();",
+                  "  pm.expect(text).to.include('ukma.edu.ua');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Реєстрація — короткий пароль (поле password < 8)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@ukma.edu.ua\",\n  \"password\": \"short\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Валідація довжини паролю зараз лише на фронтенді.",
+                  "// Якщо бекенд не перевіряє — очікуємо 201. Якщо додали validator — 422.",
+                  "pm.test('Сервер відповів (201 або 422)', () => {",
+                  "  pm.expect([201, 422]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Логін — успішний",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@ukma.edu.ua\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Відповідь містить token, userId, email', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('token');",
+                  "  pm.expect(json).to.have.property('userId');",
+                  "  pm.expect(json).to.have.property('email');",
+                  "});",
+                  "pm.test('Відповідь НЕ містить password', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.not.have.property('password');",
+                  "});",
+                  "pm.test('Token є рядком і не порожній', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.token).to.be.a('string').and.not.empty;",
+                  "});",
+                  "// Зберігаємо токен у змінну колекції для наступних запитів",
+                  "const token = pm.response.json().token;",
+                  "pm.collectionVariables.set('jwt_token', token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Логін — невірний пароль (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@ukma.edu.ua\",\n  \"password\": \"wrongpassword\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('Повідомлення про невірний email або пароль', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.detail).to.include('Невірний email або пароль');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Логін — неіснуючий email (401, не 404)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ghost@ukma.edu.ua\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 401, а не 404', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "item": [
+        {
+          "name": "Список організацій — всі",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/organizations", "host": ["{{base_url}}"], "path": ["organizations"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Відповідь є масивом', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "pm.test('Кожна організація має потрібні поля', () => {",
+                  "  const orgs = pm.response.json();",
+                  "  if (orgs.length > 0) {",
+                  "    pm.expect(orgs[0]).to.have.property('organization_id');",
+                  "    pm.expect(orgs[0]).to.have.property('name');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Список організацій — пошук за назвою",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations?search=debate",
+              "host": ["{{base_url}}"],
+              "path": ["organizations"],
+              "query": [{ "key": "search", "value": "debate" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Результати відповідають пошуку', () => {",
+                  "  const orgs = pm.response.json();",
+                  "  orgs.forEach(org => {",
+                  "    pm.expect(org.name.toLowerCase()).to.include('debate');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Список організацій — фільтр за категорією",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations?category=IT",
+              "host": ["{{base_url}}"],
+              "path": ["organizations"],
+              "query": [{ "key": "category", "value": "IT" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Всі результати категорії IT', () => {",
+                  "  const orgs = pm.response.json();",
+                  "  orgs.forEach(org => {",
+                  "    pm.expect(org.category).to.equal('IT');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Список організацій — пошук + фільтр одночасно",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations?search=society&category=IT",
+              "host": ["{{base_url}}"],
+              "path": ["organizations"],
+              "query": [
+                { "key": "search", "value": "society" },
+                { "key": "category", "value": "IT" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Список організацій — порожній результат",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations?search=xyznotexist",
+              "host": ["{{base_url}}"],
+              "path": ["organizations"],
+              "query": [{ "key": "search", "value": "xyznotexist" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Статус 200 OK (не 404)', () => pm.response.to.have.status(200));",
+                  "pm.test('Порожній масив', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
