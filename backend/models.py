@@ -25,7 +25,7 @@ class User(Base):
 
 class Event(Base):
     __tablename__ = "events"
-
+ 
     event_id = Column(String(36), primary_key=True)
     organization_id = Column(String(36), ForeignKey("organizations.organization_id"))
     title = Column(String(255), nullable=False)
@@ -35,3 +35,13 @@ class Event(Base):
     end_datetime = Column(TIMESTAMP)
     max_participants = Column(Integer)
     created_at = Column(TIMESTAMP)
+ 
+ 
+class Registration(Base):
+    __tablename__ = "registrations"
+ 
+    registration_id = Column(String(36), primary_key=True)
+    user_id = Column(String(36), ForeignKey("users.user_id"), nullable=False)
+    event_id = Column(String(36), ForeignKey("events.event_id"), nullable=False)
+    status = Column(String(50), default="pending")
+    registered_at = Column(TIMESTAMP)

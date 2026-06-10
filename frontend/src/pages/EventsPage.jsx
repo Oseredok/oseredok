@@ -71,8 +71,7 @@ function FilterDropdown({ categories, activeCategory, onChange }) {
   );
 }
 
-export function EventsPage({ onTabChange, user }) {
-  const [allEvents, setAllEvents] = useState([]);
+export function EventsPage({ onTabChange, user, onNavigateToEvent }) {  
   const [loading, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -236,7 +235,14 @@ export function EventsPage({ onTabChange, user }) {
 
       {!loading && allEvents.length > 0 && (
         <div className="orgs-grid">
-          {allEvents.map((event, i) => <EventCard key={event.event_id} event={event} idx={i} />)}
+          {allEvents.map((event, i) => (
+            <EventCard
+              key={event.event_id}
+              event={event}
+              idx={i}
+              onNavigate={onNavigateToEvent}  
+            />
+          ))}
         </div>
       )}
     </div>

@@ -58,7 +58,12 @@ export function Navbar({ user, onLogin, onRegister, onLogout, view, onViewChange
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>{user.email}</span>
-          <button onClick={() => {}} style={{ padding: "8px 20px", borderRadius: 99, fontSize: 13, fontWeight: 700, border: "none", background: "linear-gradient(135deg, #2563eb, #3b82f6)", color: "#fff", cursor: "pointer", boxShadow: "0 4px 12px rgba(37,99,235,0.3)" }}>Мій профіль</button>
+          <button
+            onClick={() => onViewChange("profile")}  
+            style={{ padding: "8px 20px", borderRadius: 99, fontSize: 13, fontWeight: 700, border: "none", background: "linear-gradient(135deg, #2563eb, #3b82f6)", color: "#fff", cursor: "pointer", boxShadow: "0 4px 12px rgba(37,99,235,0.3)" }}
+          >
+            Мій профіль
+          </button>
           <button onClick={onLogout} style={{ padding: "8px 16px", borderRadius: 99, fontSize: 13, fontWeight: 600, border: "1.5px solid #e2e8f0", background: "#fff", color: "#64748b", cursor: "pointer" }}>Вийти</button>
         </div>
       </nav>

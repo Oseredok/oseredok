@@ -4,6 +4,8 @@ import { Modal } from "./components/Modal";
 import { OrganizationsPage } from "./pages/OrganizationsPage";
 import { OrgDetailPage } from "./pages/OrgDetailPage";
 import { EventsPage } from "./pages/EventsPage";
+import { EventDetailPage } from "./pages/Eventdetailpage";
+import { ProfilePage } from "./pages/ProfilePage";
 
 const API = "http://127.0.0.1:8000";
 
@@ -16,6 +18,7 @@ export default function App() {
   });
   const [view, setView] = useState("home");
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [orgsCount, setOrgsCount] = useState(0);
 
   useEffect(() => {
@@ -35,6 +38,12 @@ export default function App() {
   const navigateToOrg = (org) => {
     setSelectedOrg(org);
     setView("org-detail");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const navigateToEvent = (event) => {
+    setSelectedEvent(event);
+    setView("event-detail");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -149,7 +158,7 @@ export default function App() {
           </div>
         )}
 
-        {(view === "organizations") && (
+        {view === "organizations" && (
           <OrganizationsPage
             onNavigateToOrg={navigateToOrg}
             activeTab={view}
@@ -157,11 +166,30 @@ export default function App() {
             user={user}
           />
         )}
+
         {view === "events" && (
-         <EventsPage
-          onTabChange={setView}
-          user={user}
-         />
+          <EventsPage
+            onTabChange={setView}
+            user={user}
+            onNavigateToEvent={navigateToEvent}
+          />
+        )}
+
+        {view === "event-detail" && selectedEvent && (
+          <EventDetailPage
+            event={selectedEvent}
+            onBack={() => setView("events")}
+            user={user}
+            onLoginRequired={() => setPage("login")}
+            onNavigateToOrg={navigateToOrg}
+          />
+        )}
+
+        {view === "profile" && (
+          <ProfilePage
+            user={user}
+            onViewChange={setView}
+          />
         )}
 
         {view === "org-detail" && selectedOrg && (

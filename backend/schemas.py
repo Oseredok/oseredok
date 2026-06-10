@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from datetime import datetime
 
 
 class OrganizationResponse(BaseModel):
@@ -31,3 +32,16 @@ class TokenResponse(BaseModel):
     token: str
     userId: str
     email: str
+
+
+class UserProfileResponse(BaseModel):
+    userId: str
+    email: str
+    full_name: str | None = None
+    role: str | None = None
+
+
+class RegistrationResponse(BaseModel):
+    registration_id: str
+    event_id: str
+    status: str
