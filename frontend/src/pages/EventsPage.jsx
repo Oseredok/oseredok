@@ -71,7 +71,8 @@ function FilterDropdown({ categories, activeCategory, onChange }) {
   );
 }
 
-export function EventsPage({ onTabChange, user, onNavigateToEvent }) {  
+export function EventsPage({ onTabChange, user, onNavigateToEvent }) {
+  const [allEvents, setAllEvents] = useState([]);  // ✅ виправлено
   const [loading, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -240,7 +241,7 @@ export function EventsPage({ onTabChange, user, onNavigateToEvent }) {
               key={event.event_id}
               event={event}
               idx={i}
-              onNavigate={onNavigateToEvent}  
+              onNavigate={onNavigateToEvent}
             />
           ))}
         </div>
