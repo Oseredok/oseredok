@@ -8,7 +8,7 @@ import uuid
 import os
 
 from database import SessionLocal, get_db
-from models import Organization, User
+from models import Organization, User, Event
 from schemas import (
     UserRegisterRequest, UserRegisterResponse,
     UserLoginRequest, TokenResponse
@@ -107,3 +107,37 @@ def login(body: UserLoginRequest, db: Session = Depends(get_db)):
 
     token = create_token(user.user_id, user.email)
     return TokenResponse(token=token, userId=user.user_id, email=user.email)
+
+@app.get("/events")
+def get_events(
+    search: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Event, Organization).outerjoin(
+        Organization, Event.organization_id == Organization.organization_id
+    )
+
+    if search:
+        query = query.filter(Event.title.ilike(f"%{search}%"))
+
+    if category:
+        query = query.filter(Organization.category == category)
+
+    results = query.order_by(Event.start_datetime).all()
+    return [
+        {
+            "event_id": event.event_id,
+            "title": event.title,
+            "description": event.description,
+            "category": org.category if org else None,
+            "start_datetime": event.start_datetime,
+            "end_datetime": event.end_datetime,
+            "location": event.location,
+            "max_participants": event.max_participants,
+            "organization_id": event.organization_id,
+            "organization_name": org.name if org else None,
+            "organization_logo": org.logo_url if org else None,
+        }
+        for event, org in results
+    ]

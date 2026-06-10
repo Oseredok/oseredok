@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useDebounce } from "../hooks/useDebounce";
-import { OrgCard } from "../components/OrgCard";
+import { EventCard } from "../components/EventCard";
 import { SkeletonCard } from "../components/SkeletonCard";
 import { categoryColors } from "../constants/categoryColors";
 
@@ -26,7 +26,7 @@ function FilterDropdown({ categories, activeCategory, onChange }) {
           border: "1.5px solid " + (activeCategory !== "Всі" ? "#2563eb" : "#e2e8f0"),
           background: activeCategory !== "Всі" ? "#eff6ff" : "#fff",
           color: activeCategory !== "Всі" ? "#2563eb" : "#64748b",
-          cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s",
+          cursor: "pointer", whiteSpace: "nowrap",
         }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -41,7 +41,7 @@ function FilterDropdown({ categories, activeCategory, onChange }) {
           position: "absolute", top: "calc(100% + 8px)", left: 0,
           background: "#fff", borderRadius: 14, border: "1.5px solid #e2e8f0",
           boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 100,
-          minWidth: 180, overflow: "hidden", animation: "fadeUp 0.15s ease",
+          minWidth: 180, overflow: "hidden",
         }}>
           {["Всі", ...categories].map(cat => {
             const isActive = cat === activeCategory;
@@ -71,8 +71,8 @@ function FilterDropdown({ categories, activeCategory, onChange }) {
   );
 }
 
-export function OrganizationsPage({ onNavigateToOrg, onTabChange, user }) {
-  const [allOrgs, setAllOrgs] = useState([]);
+export function EventsPage({ onTabChange, user }) {
+  const [allEvents, setAllEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -82,10 +82,10 @@ export function OrganizationsPage({ onNavigateToOrg, onTabChange, user }) {
   const debouncedSearch = useDebounce(searchInput, 300);
 
   useEffect(() => {
-    fetch(`${API}/organizations`)
+    fetch(`${API}/events`)
       .then(r => r.json())
       .then(data => {
-        const cats = [...new Set(data.map(o => o.category).filter(Boolean))];
+        const cats = [...new Set(data.map(e => e.category).filter(Boolean))];
         setAllCategories(cats);
       })
       .catch(() => {});
@@ -98,9 +98,9 @@ export function OrganizationsPage({ onNavigateToOrg, onTabChange, user }) {
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (activeCategory !== "Всі") params.set("category", activeCategory);
 
-    fetch(`${API}/organizations${params.toString() ? "?" + params.toString() : ""}`)
+    fetch(`${API}/events${params.toString() ? "?" + params.toString() : ""}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(data => { setAllOrgs(data); setLoading(false); setHasLoaded(true); })
+      .then(data => { setAllEvents(data); setLoading(false); setHasLoaded(true); })
       .catch(() => { setError(true); setLoading(false); setHasLoaded(true); });
   }, [debouncedSearch, activeCategory]);
 
@@ -112,7 +112,7 @@ export function OrganizationsPage({ onNavigateToOrg, onTabChange, user }) {
             display: "inline-block", padding: "12px 48px", borderRadius: 99,
             background: "#dbeafe", color: "#2563eb", fontSize: 18, fontWeight: 700,
           }}>
-            Усі організації
+            Усі події
           </div>
         </div>
       )}
@@ -135,7 +135,7 @@ export function OrganizationsPage({ onNavigateToOrg, onTabChange, user }) {
                 padding: "9px 32px 9px 36px", borderRadius: 10, fontSize: 13,
                 border: "1.5px solid #e2e8f0", background: "#f8fafc",
                 color: "#0f172a", outline: "none", fontFamily: "inherit",
-                transition: "border-color 0.15s", width: "100%", boxSizing: "border-box",
+                width: "100%", boxSizing: "border-box", transition: "border-color 0.15s",
               }}
               onFocus={e => e.target.style.borderColor = "#2563eb"}
               onBlur={e => e.target.style.borderColor = "#e2e8f0"}
@@ -150,17 +150,13 @@ export function OrganizationsPage({ onNavigateToOrg, onTabChange, user }) {
               const isActive = cat === activeCategory;
               const color = cat === "Всі" ? "#2563eb" : (categoryColors[cat] || "#2563eb");
               return (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  style={{
-                    padding: "7px 16px", borderRadius: 99, fontSize: 12, fontWeight: 600,
-                    border: "1.5px solid " + (isActive ? color : "#e2e8f0"),
-                    background: isActive ? color : "#fff",
-                    color: isActive ? "#fff" : "#64748b",
-                    cursor: "pointer", transition: "all 0.15s",
-                  }}
-                >{cat}</button>
+                <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+                  padding: "7px 16px", borderRadius: 99, fontSize: 12, fontWeight: 600,
+                  border: "1.5px solid " + (isActive ? color : "#e2e8f0"),
+                  background: isActive ? color : "#fff",
+                  color: isActive ? "#fff" : "#64748b",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}>{cat}</button>
               );
             })}
           </div>
@@ -170,11 +166,12 @@ export function OrganizationsPage({ onNavigateToOrg, onTabChange, user }) {
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 36, flexWrap: "wrap" }}>
           <button
+            onClick={() => onTabChange("organizations")}
             style={{
               fontSize: "clamp(26px, 3.5vw, 38px)", fontWeight: 800,
               fontFamily: "'Playfair Display', serif",
-              color: "#2563eb", background: "none", border: "none", cursor: "pointer",
-              padding: "0 0 6px", borderBottom: "3px solid #2563eb", lineHeight: 1,
+              color: "#94a3b8", background: "none", border: "none", cursor: "pointer",
+              padding: "0 0 6px", borderBottom: "3px solid transparent", lineHeight: 1,
             }}
           >Організації</button>
 
@@ -203,22 +200,20 @@ export function OrganizationsPage({ onNavigateToOrg, onTabChange, user }) {
           <FilterDropdown categories={allCategories} activeCategory={activeCategory} onChange={setActiveCategory} />
 
           <button
-            onClick={() => onTabChange("events")}
             style={{
               fontSize: "clamp(26px, 3.5vw, 38px)", fontWeight: 800,
               fontFamily: "'Playfair Display', serif",
-              color: "#94a3b8", background: "none", border: "none", cursor: "pointer",
-              padding: "0 0 6px", borderBottom: "3px solid transparent",
-              transition: "all 0.2s", lineHeight: 1, marginLeft: "auto",
+              color: "#2563eb", background: "none", border: "none", cursor: "pointer",
+              padding: "0 0 6px", borderBottom: "3px solid #2563eb", lineHeight: 1, marginLeft: "auto",
             }}
           >Події</button>
         </div>
       )}
 
-      {user && !loading && allOrgs.length > 0 && (
+      {user && !loading && allEvents.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", display: "inline" }}>Організації</h2>
-          <span style={{ fontSize: 13, color: "#94a3b8", marginLeft: 10 }}>{allOrgs.length} організацій</span>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", display: "inline" }}>Найближчі події</h2>
+          <span style={{ fontSize: 13, color: "#94a3b8", marginLeft: 10 }}>{allEvents.length} подій</span>
         </div>
       )}
 
@@ -226,22 +221,22 @@ export function OrganizationsPage({ onNavigateToOrg, onTabChange, user }) {
 
       {!loading && error && (
         <div style={{ textAlign: "center", padding: "80px 20px" }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#334155", marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>Не вдалося завантажити дані</h3>
-          <p style={{ fontSize: 14, color: "#94a3b8" }}>Перевір чи запущений бекенд на <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>http://127.0.0.1:8000</code></p>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#334155", marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>Не вдалося завантажити події</h3>
+          <p style={{ fontSize: 14, color: "#94a3b8" }}>Перевір чи запущений бекенд</p>
         </div>
       )}
 
-      {!loading && !error && hasLoaded && allOrgs.length === 0 && (
+      {!loading && !error && hasLoaded && allEvents.length === 0 && (
         <div style={{ textAlign: "center", padding: "80px 20px" }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#334155", marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>Нічого не знайдено</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#334155", marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>Подій не знайдено</h3>
           <p style={{ fontSize: 14, color: "#94a3b8", marginBottom: 24 }}>Спробуй інший запит або очисти фільтри</p>
           <button onClick={() => { setSearchInput(""); setActiveCategory("Всі"); }} style={{ padding: "10px 24px", borderRadius: 99, fontSize: 13, fontWeight: 700, border: "1.5px solid #2563eb", background: "#fff", color: "#2563eb", cursor: "pointer" }}>Скинути фільтри</button>
         </div>
       )}
 
-      {!loading && allOrgs.length > 0 && (
+      {!loading && allEvents.length > 0 && (
         <div className="orgs-grid">
-          {allOrgs.map((org, i) => <OrgCard key={org.organization_id} org={org} idx={i} onNavigate={onNavigateToOrg} />)}
+          {allEvents.map((event, i) => <EventCard key={event.event_id} event={event} idx={i} />)}
         </div>
       )}
     </div>

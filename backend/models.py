@@ -1,5 +1,5 @@
 
-from sqlalchemy import Column, String, Text, TIMESTAMP
+from sqlalchemy import Column, String, Text, TIMESTAMP, ForeignKey, Integer
 from database import Base
 
 class Organization(Base):
@@ -21,4 +21,17 @@ class User(Base):
     email = Column(String(255), nullable=False, unique=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(50))
+    created_at = Column(TIMESTAMP)
+
+class Event(Base):
+    __tablename__ = "events"
+
+    event_id = Column(String(36), primary_key=True)
+    organization_id = Column(String(36), ForeignKey("organizations.organization_id"))
+    title = Column(String(255), nullable=False)
+    description = Column(Text)
+    location = Column(String(255))
+    start_datetime = Column(TIMESTAMP)
+    end_datetime = Column(TIMESTAMP)
+    max_participants = Column(Integer)
     created_at = Column(TIMESTAMP)
