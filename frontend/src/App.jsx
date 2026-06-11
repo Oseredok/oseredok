@@ -13,6 +13,7 @@ import OrgDetailPage from "./pages/OrgDetailPage";
 import OrganizationsPage from "./pages/OrganizationsPage";
 import ProfilePage from "./pages/ProfilePage";
 import { canCreateEvent, isAdmin } from "./utils/roles";
+import { layout } from "./theme/tokens";
 
 export default function App() {
   const [page, setPage] = useState(null);
