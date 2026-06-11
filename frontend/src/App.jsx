@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { API } from "./api";
 import Navbar from "./components/Navbar";
 import Modal from "./components/Modal";
+import { AdminPage } from "./pages/AdminPage";
+import { CreateEventPage } from "./pages/CreateEventPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
 import HomePage from "./pages/HomePage";
@@ -29,15 +31,46 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    fetch(`${API}/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) {
+          setUser((u) =>
+            u
+              ? { ...u, userId: data.userId, full_name: data.full_name, role: data.role }
+              : { token, email: data.email, userId: data.userId, full_name: data.full_name, role: data.role }
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("email");
     setUser(null);
-    if (view === "profile") setView("home");
+    setView("home");
   };
 
   const handleSuccess = (userData) => {
-    if (userData) setUser(userData);
+    if (!userData) return;
+    setUser(userData);
+    fetch(`${API}/users/me`, {
+      headers: { Authorization: `Bearer ${userData.token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) {
+          setUser((u) => ({ ...u, userId: data.userId, full_name: data.full_name, role: data.role }));
+        }
+      })
+      .catch(() => {});
   };
 
   const navigate = (target, item = null) => {
@@ -63,6 +96,10 @@ export default function App() {
       }
     } else if (target === "profile") {
       setView("profile");
+    } else if (target === "admin") {
+      setView("admin");
+    } else if (target === "create-event") {
+      setView("create-event");
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -116,7 +153,11 @@ export default function App() {
         )}
 
         {view === "events" && (
-          <EventsPage onNavigateToEvent={navigateToEvent} />
+          <EventsPage
+            user={user}
+            onNavigateToEvent={navigateToEvent}
+            onViewChange={navigate}
+          />
         )}
 
         {view === "event-detail" && selectedEvent && (
@@ -130,6 +171,14 @@ export default function App() {
 
         {view === "profile" && (
           <ProfilePage user={user} onNavigateToEvent={navigateToEvent} />
+        )}
+
+        {view === "admin" && user?.role === "admin" && (
+          <AdminPage user={user} />
+        )}
+
+        {view === "create-event" && user && (
+          <CreateEventPage user={user} onSuccess={() => navigate("events")} />
         )}
       </main>
 
