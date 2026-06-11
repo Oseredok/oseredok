@@ -95,7 +95,7 @@ export function CreateEventPage({ user, onSuccess }) {
 
   if (organizations.length === 0) {
     return (
-      <div style={{ textAlign: "center", padding: 80, animation: "fadeUp 0.5s ease both" }}>
+      <div style={{ textAlign: "center", padding: 80, animation: "fadeUp 0.5s ease both", maxWidth: 640, margin: "0 auto" }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: colors.text, fontFamily: fonts.heading, marginBottom: 8 }}>
           Немає доступних організацій
         </h2>
@@ -107,15 +107,25 @@ export function CreateEventPage({ user, onSuccess }) {
   }
 
   return (
-    <div style={{ animation: "fadeUp 0.5s ease both" }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", fontFamily: "'Playfair Display', serif", marginBottom: 8 }}>
+    <div style={{ animation: "fadeUp 0.5s ease both", maxWidth: 640, margin: "0 auto", width: "100%" }}>
+      <div style={{ marginBottom: 32, textAlign: "center" }}>
+        <h1 style={{ fontSize: 32, fontWeight: 800, color: colors.text, fontFamily: fonts.heading, marginBottom: 8 }}>
           Створити подію
         </h1>
-        <p style={{ fontSize: 14, color: "#64748b" }}>Заповніть деталі нової події</p>
+        <p style={{ fontSize: 14, color: colors.textSecondary, fontFamily: fonts.body }}>
+          Заповніть деталі нової події
+        </p>
       </div>
 
-      <div style={{ background: "#fff", borderRadius: 20, padding: 28, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", maxWidth: 600 }}>
+      <div
+        style={{
+          background: colors.surface,
+          borderRadius: radius.xl,
+          padding: 28,
+          boxShadow: "0 2px 12px rgba(9,30,66,0.06)",
+          border: `1px solid ${colors.borderLight}`,
+        }}
+      >
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
