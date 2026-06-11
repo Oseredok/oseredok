@@ -1,248 +1,201 @@
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState } from "react";
+import EventCard from "../components/cards/EventCard";
+import { filterEvents, getEventCategories, mockEvents } from "../data/mockEvents";
 import { useDebounce } from "../hooks/useDebounce";
-import { EventCard } from "../components/EventCard";
-import { SkeletonCard } from "../components/SkeletonCard";
-import { categoryColors } from "../constants/categoryColors";
+import { categoryColors, colors, fonts, radius } from "../theme/tokens";
 
-const API = "http://127.0.0.1:8000";
+export default function EventsPage({ onNavigateToEvent }) {
+  const [searchInput, setSearchInput] = useState("");
+  const [activeCategory, setActiveCategory] = useState("Всі");
+  const debouncedSearch = useDebounce(searchInput, 300);
 
-function FilterDropdown({ categories, activeCategory, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const categories = useMemo(() => ["Всі", ...getEventCategories(mockEvents)], []);
 
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  const filteredEvents = useMemo(
+    () => filterEvents(mockEvents, { search: debouncedSearch, category: activeCategory }),
+    [debouncedSearch, activeCategory]
+  );
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600,
-          border: "1.5px solid " + (activeCategory !== "Всі" ? "#2563eb" : "#e2e8f0"),
-          background: activeCategory !== "Всі" ? "#eff6ff" : "#fff",
-          color: activeCategory !== "Всі" ? "#2563eb" : "#64748b",
-          cursor: "pointer", whiteSpace: "nowrap",
-        }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-        </svg>
-        {activeCategory === "Всі" ? "Категорія" : activeCategory}
-        <span style={{ fontSize: 10 }}>{open ? "▲" : "▼"}</span>
-      </button>
+    <div>
+      <div style={{ marginBottom: 32 }}>
+        <h1
+          style={{
+            fontSize: "clamp(28px, 5vw, 36px)",
+            fontWeight: 800,
+            color: colors.text,
+            fontFamily: fonts.heading,
+            letterSpacing: "-0.02em",
+            marginBottom: 8,
+          }}
+        >
+          Події
+        </h1>
+        <p style={{ fontSize: 15, color: colors.textSecondary, fontFamily: fonts.body }}>
+          Знайди цікаві події студентських організацій
+        </p>
+      </div>
 
-      {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 8px)", left: 0,
-          background: "#fff", borderRadius: 14, border: "1.5px solid #e2e8f0",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 100,
-          minWidth: 180, overflow: "hidden",
-        }}>
-          {["Всі", ...categories].map(cat => {
+      <div style={{ marginBottom: 28, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ position: "relative" }}>
+          <div
+            style={{
+              position: "absolute",
+              left: 14,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: colors.textMuted,
+              fontSize: 16,
+              pointerEvents: "none",
+            }}
+          >
+            ⌕
+          </div>
+          <input
+            type="text"
+            placeholder="Пошук за назвою або організацією..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px 16px 12px 42px",
+              borderRadius: radius.md,
+              fontSize: 14,
+              fontFamily: fonts.body,
+              border: `1px solid ${colors.border}`,
+              background: colors.surface,
+              color: colors.text,
+              outline: "none",
+              boxSizing: "border-box",
+              transition: "border-color 0.15s, box-shadow 0.15s",
+              boxShadow: "0 1px 2px rgba(9,30,66,0.06)",
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = colors.primary;
+              e.target.style.boxShadow = "0 0 0 3px rgba(0,82,204,0.12)";
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = colors.border;
+              e.target.style.boxShadow = "0 1px 2px rgba(9,30,66,0.06)";
+            }}
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput("")}
+              style={{
+                position: "absolute",
+                right: 12,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                color: colors.textMuted,
+                cursor: "pointer",
+                fontSize: 16,
+                padding: 4,
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {categories.map((cat) => {
             const isActive = cat === activeCategory;
-            const color = cat === "Всі" ? "#2563eb" : (categoryColors[cat] || "#2563eb");
+            const color =
+              cat === "Всі" ? colors.primary : categoryColors[cat] || categoryColors.default;
             return (
               <button
                 key={cat}
-                onClick={() => { onChange(cat); setOpen(false); }}
+                type="button"
+                onClick={() => setActiveCategory(cat)}
                 style={{
-                  width: "100%", padding: "10px 16px", textAlign: "left",
-                  fontSize: 13, fontWeight: isActive ? 700 : 500,
-                  background: isActive ? "#eff6ff" : "transparent",
-                  color: isActive ? color : "#334155",
-                  border: "none", cursor: "pointer",
-                  borderLeft: isActive ? "3px solid " + color : "3px solid transparent",
+                  padding: "7px 16px",
+                  borderRadius: radius.pill,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  border: isActive ? `1.5px solid ${color}` : `1px solid ${colors.border}`,
+                  background: isActive ? color : colors.surface,
+                  color: isActive ? colors.white : colors.textSecondary,
+                  fontFamily: fonts.body,
                 }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#f8fafc"; }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
               >
                 {cat}
               </button>
             );
           })}
         </div>
-      )}
-    </div>
-  );
-}
+      </div>
 
-export function EventsPage({ onTabChange, user, onNavigateToEvent }) {
-  const [allEvents, setAllEvents] = useState([]);  // ✅ виправлено
-  const [loading, setLoading] = useState(true);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [error, setError] = useState(false);
-  const [searchInput, setSearchInput] = useState("");
-  const [activeCategory, setActiveCategory] = useState("Всі");
-  const [allCategories, setAllCategories] = useState([]);
-  const debouncedSearch = useDebounce(searchInput, 300);
+      <div
+        style={{
+          marginBottom: 20,
+          fontSize: 13,
+          color: colors.textMuted,
+          fontWeight: 500,
+          fontFamily: fonts.body,
+        }}
+      >
+        {filteredEvents.length > 0
+          ? `${filteredEvents.length} ${filteredEvents.length === 1 ? "подія" : filteredEvents.length < 5 ? "події" : "подій"}`
+          : ""}
+      </div>
 
-  useEffect(() => {
-    fetch(`${API}/events`)
-      .then(r => r.json())
-      .then(data => {
-        const cats = [...new Set(data.map(e => e.category).filter(Boolean))];
-        setAllCategories(cats);
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    setError(false);
-    const params = new URLSearchParams();
-    if (debouncedSearch) params.set("search", debouncedSearch);
-    if (activeCategory !== "Всі") params.set("category", activeCategory);
-
-    fetch(`${API}/events${params.toString() ? "?" + params.toString() : ""}`)
-      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(data => { setAllEvents(data); setLoading(false); setHasLoaded(true); })
-      .catch(() => { setError(true); setLoading(false); setHasLoaded(true); });
-  }, [debouncedSearch, activeCategory]);
-
-  return (
-    <div>
-      {user && (
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{
-            display: "inline-block", padding: "12px 48px", borderRadius: 99,
-            background: "#dbeafe", color: "#2563eb", fontSize: 18, fontWeight: 700,
-          }}>
-            Усі події
-          </div>
-        </div>
-      )}
-
-      {user ? (
-        <div style={{
-          background: "#fff", borderRadius: 16, padding: "16px 20px",
-          display: "flex", alignItems: "center", gap: 12,
-          marginBottom: 32, flexWrap: "wrap",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-        }}>
-          <div style={{ position: "relative", minWidth: 200 }}>
-            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 15, pointerEvents: "none" }}>⌕</span>
-            <input
-              type="text"
-              placeholder="Пошук за назвою..."
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              style={{
-                padding: "9px 32px 9px 36px", borderRadius: 10, fontSize: 13,
-                border: "1.5px solid #e2e8f0", background: "#f8fafc",
-                color: "#0f172a", outline: "none", fontFamily: "inherit",
-                width: "100%", boxSizing: "border-box", transition: "border-color 0.15s",
-              }}
-              onFocus={e => e.target.style.borderColor = "#2563eb"}
-              onBlur={e => e.target.style.borderColor = "#e2e8f0"}
-            />
-            {searchInput && (
-              <button onClick={() => setSearchInput("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 14 }}>✕</button>
-            )}
-          </div>
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", flex: 1 }}>
-            {["Всі", ...allCategories].map(cat => {
-              const isActive = cat === activeCategory;
-              const color = cat === "Всі" ? "#2563eb" : (categoryColors[cat] || "#2563eb");
-              return (
-                <button key={cat} onClick={() => setActiveCategory(cat)} style={{
-                  padding: "7px 16px", borderRadius: 99, fontSize: 12, fontWeight: 600,
-                  border: "1.5px solid " + (isActive ? color : "#e2e8f0"),
-                  background: isActive ? color : "#fff",
-                  color: isActive ? "#fff" : "#64748b",
-                  cursor: "pointer", transition: "all 0.15s",
-                }}>{cat}</button>
-              );
-            })}
-          </div>
-
-          <FilterDropdown categories={allCategories} activeCategory={activeCategory} onChange={setActiveCategory} />
-        </div>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 36, flexWrap: "wrap" }}>
-          <button
-            onClick={() => onTabChange("organizations")}
+      {filteredEvents.length === 0 && (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "80px 20px",
+            animation: "fadeUp 0.4s ease both",
+          }}
+        >
+          <h3
             style={{
-              fontSize: "clamp(26px, 3.5vw, 38px)", fontWeight: 800,
-              fontFamily: "'Playfair Display', serif",
-              color: "#94a3b8", background: "none", border: "none", cursor: "pointer",
-              padding: "0 0 6px", borderBottom: "3px solid transparent", lineHeight: 1,
+              fontSize: 18,
+              fontWeight: 700,
+              color: colors.text,
+              marginBottom: 8,
+              fontFamily: fonts.heading,
             }}
-          >Організації</button>
-
-          <div style={{ position: "relative", flex: 1, maxWidth: 340, minWidth: 180 }}>
-            <span style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 15, pointerEvents: "none" }}>⌕</span>
-            <input
-              type="text"
-              placeholder="Пошук за назвою..."
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              style={{
-                width: "100%", padding: "10px 36px 10px 38px",
-                borderRadius: 12, fontSize: 13, fontFamily: "inherit",
-                border: "1.5px solid #e2e8f0", background: "#fff",
-                color: "#0f172a", outline: "none", boxSizing: "border-box",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)", transition: "border-color 0.15s",
-              }}
-              onFocus={e => e.target.style.borderColor = "#2563eb"}
-              onBlur={e => e.target.style.borderColor = "#e2e8f0"}
-            />
-            {searchInput && (
-              <button onClick={() => setSearchInput("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 14 }}>✕</button>
-            )}
-          </div>
-
-          <FilterDropdown categories={allCategories} activeCategory={activeCategory} onChange={setActiveCategory} />
-
+          >
+            Подій не знайдено
+          </h3>
+          <p style={{ fontSize: 14, color: colors.textMuted, marginBottom: 24, fontFamily: fonts.body }}>
+            Спробуй інший запит або очисти фільтри
+          </p>
           <button
-            style={{
-              fontSize: "clamp(26px, 3.5vw, 38px)", fontWeight: 800,
-              fontFamily: "'Playfair Display', serif",
-              color: "#2563eb", background: "none", border: "none", cursor: "pointer",
-              padding: "0 0 6px", borderBottom: "3px solid #2563eb", lineHeight: 1, marginLeft: "auto",
+            type="button"
+            onClick={() => {
+              setSearchInput("");
+              setActiveCategory("Всі");
             }}
-          >Події</button>
+            style={{
+              padding: "10px 24px",
+              borderRadius: radius.pill,
+              fontSize: 13,
+              fontWeight: 700,
+              border: `1.5px solid ${colors.primary}`,
+              background: colors.surface,
+              color: colors.primary,
+              cursor: "pointer",
+              fontFamily: fonts.body,
+            }}
+          >
+            Скинути фільтри
+          </button>
         </div>
       )}
 
-      {user && !loading && allEvents.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", display: "inline" }}>Найближчі події</h2>
-          <span style={{ fontSize: 13, color: "#94a3b8", marginLeft: 10 }}>{allEvents.length} подій</span>
-        </div>
-      )}
-
-      {loading && <div className="orgs-grid">{[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}</div>}
-
-      {!loading && error && (
-        <div style={{ textAlign: "center", padding: "80px 20px" }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#334155", marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>Не вдалося завантажити події</h3>
-          <p style={{ fontSize: 14, color: "#94a3b8" }}>Перевір чи запущений бекенд</p>
-        </div>
-      )}
-
-      {!loading && !error && hasLoaded && allEvents.length === 0 && (
-        <div style={{ textAlign: "center", padding: "80px 20px" }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#334155", marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>Подій не знайдено</h3>
-          <p style={{ fontSize: 14, color: "#94a3b8", marginBottom: 24 }}>Спробуй інший запит або очисти фільтри</p>
-          <button onClick={() => { setSearchInput(""); setActiveCategory("Всі"); }} style={{ padding: "10px 24px", borderRadius: 99, fontSize: 13, fontWeight: 700, border: "1.5px solid #2563eb", background: "#fff", color: "#2563eb", cursor: "pointer" }}>Скинути фільтри</button>
-        </div>
-      )}
-
-      {!loading && allEvents.length > 0 && (
-        <div className="orgs-grid">
-          {allEvents.map((event, i) => (
-            <EventCard
-              key={event.event_id}
-              event={event}
-              idx={i}
-              onNavigate={onNavigateToEvent}
-            />
+      {filteredEvents.length > 0 && (
+        <div className="cards-grid">
+          {filteredEvents.map((event, i) => (
+            <EventCard key={event.event_id} event={event} idx={i} onNavigate={onNavigateToEvent} />
           ))}
         </div>
       )}
