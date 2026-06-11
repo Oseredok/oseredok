@@ -72,6 +72,7 @@ class OrganizationCreateRequest(BaseModel):
     instagram: str | None = None
     telegram: str | None = None
     website: str | None = None
+    owner_id: str | None = None
 
 
 class OrganizationUpdateRequest(BaseModel):

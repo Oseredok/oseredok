@@ -12,7 +12,7 @@ import HomePage from "./pages/HomePage";
 import OrgDetailPage from "./pages/OrgDetailPage";
 import OrganizationsPage from "./pages/OrganizationsPage";
 import ProfilePage from "./pages/ProfilePage";
-import { layout } from "./theme/tokens";
+import { canCreateEvent, isAdmin } from "./utils/roles";
 
 export default function App() {
   const [page, setPage] = useState(null);
@@ -182,7 +182,7 @@ export default function App() {
           <ProfilePage user={user} onNavigateToEvent={navigateToEvent} onNavigate={navigate} />
         )}
 
-        {view === "admin" && user?.role === "admin" && (
+        {view === "admin" && isAdmin(user?.role) && (
           <AdminPage
             user={user}
             onCreateOrg={() => navigate("admin-create-org")}
@@ -191,14 +191,14 @@ export default function App() {
           />
         )}
 
-        {view === "admin-create-org" && user?.role === "admin" && (
+        {view === "admin-create-org" && isAdmin(user?.role) && (
           <CreateOrganizationPage
             onCancel={() => navigate("admin")}
             onSuccess={() => navigate("admin")}
           />
         )}
 
-        {view === "admin-edit-org" && user?.role === "admin" && selectedOrg && (
+        {view === "admin-edit-org" && isAdmin(user?.role) && selectedOrg && (
           <AdminOrgEditPage
             org={selectedOrg}
             onBack={() => navigate("admin")}
@@ -207,7 +207,7 @@ export default function App() {
           />
         )}
 
-        {view === "create-event" && user && (
+        {view === "create-event" && canCreateEvent(user?.role) && (
           <CreateEventPage user={user} onSuccess={() => navigate("events")} />
         )}
       </main>

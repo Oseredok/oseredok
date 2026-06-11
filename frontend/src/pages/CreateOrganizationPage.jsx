@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { API } from "../api";
 import OrganizationFormFields from "../components/admin/OrganizationFormFields";
+import LogoUploadField from "../components/LogoUploadField";
 import { IconBuilding, IconCheck, IconX } from "../components/admin/AdminIcons";
+import { useDebounce } from "../hooks/useDebounce";
+import { roleLabel } from "../utils/roles";
 import { colors, fonts, radius } from "../theme/tokens";
 
 const EMPTY_FORM = {
@@ -16,12 +19,6 @@ const EMPTY_FORM = {
   telegram: "",
 };
 
-const MOCK_OWNERS = [
-  { id: "1", name: "Михайло Корж", email: "m.korzh@ukma.edu.ua", role: "Студент" },
-  { id: "2", name: "Олена Петренко", email: "o.petrenko@ukma.edu.ua", role: "Студент" },
-  { id: "3", name: "Андрій Сидоренко", email: "a.sydorenko@ukma.edu.ua", role: "Адмін" },
-];
-
 function authHeaders() {
   return {
     "Content-Type": "application/json",
@@ -33,16 +30,25 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [ownerSearch, setOwnerSearch] = useState("");
   const [selectedOwner, setSelectedOwner] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [ownerResults, setOwnerResults] = useState([]);
+  const debouncedOwnerSearch = useDebounce(ownerSearch, 300);
 
-  const ownerResults = ownerSearch.trim()
-    ? MOCK_OWNERS.filter(
-        (u) =>
-          u.name.toLowerCase().includes(ownerSearch.toLowerCase()) ||
-          u.email.toLowerCase().includes(ownerSearch.toLowerCase())
-      )
-    : [];
+  useEffect(() => {
+    if (!debouncedOwnerSearch.trim() || selectedOwner) {
+      setOwnerResults([]);
+      return;
+    }
+    fetch(`${API}/users/search?q=${encodeURIComponent(debouncedOwnerSearch)}`, {
+      headers: authHeaders(),
+    })
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setOwnerResults)
+      .catch(() => setOwnerResults([]));
+  }, [debouncedOwnerSearch, selectedOwner]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,10 +59,13 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
     setSubmitting(true);
     setMessage("");
     try {
+      const payload = { ...form, owner_id: selectedOwner.user_id };
+      if (logoPreview) payload.logo_url = logoPreview;
+
       const res = await fetch(`${API}/organizations`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (res.status === 201) {
         onSuccess?.();
@@ -100,6 +109,19 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
       </div>
 
       <form onSubmit={handleSubmit}>
+        <LogoUploadField
+          preview={logoPreview}
+          fileName={logoFile?.name}
+          onChange={(file) => {
+            setLogoFile(file);
+            setLogoPreview(URL.createObjectURL(file));
+          }}
+          onRemove={() => {
+            setLogoFile(null);
+            setLogoPreview(null);
+          }}
+        />
+
         <OrganizationFormFields
           form={form}
           setForm={setForm}
@@ -117,11 +139,11 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
           <div style={{ marginTop: -12, marginBottom: 20 }}>
             {ownerResults.map((u) => (
               <button
-                key={u.id}
+                key={u.user_id}
                 type="button"
                 onClick={() => {
                   setSelectedOwner(u);
-                  setOwnerSearch(u.name);
+                  setOwnerSearch(u.full_name || u.email);
                 }}
                 style={{
                   display: "flex",
@@ -150,11 +172,13 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
                     fontWeight: 700,
                   }}
                 >
-                  {u.name[0]}
+                  {(u.full_name || u.email)[0]}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div>
-                  <div style={{ fontSize: 13, color: colors.textSecondary }}>{u.email} · {u.role}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{u.full_name || u.email}</div>
+                  <div style={{ fontSize: 13, color: colors.textSecondary }}>
+                    {u.email} · {roleLabel(u.role)}
+                  </div>
                 </div>
               </button>
             ))}
