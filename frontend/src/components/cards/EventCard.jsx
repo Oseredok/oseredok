@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { categoryColors, colors, fonts, radius, shadows } from "../../theme/tokens";
-import CategoryPill from "../CategoryPill";
 import { IconCalendar, IconMapPin } from "../ui/Icons";
 
 function formatDate(iso) {
@@ -17,6 +16,7 @@ function formatDate(iso) {
 export default function EventCard({ event, idx, onNavigate, compact = false }) {
   const [hovered, setHovered] = useState(false);
   const color = categoryColors[event.category] || categoryColors.default;
+  const orgName = event.org_name || event.organization_name;
 
   return (
     <div
@@ -49,53 +49,83 @@ export default function EventCard({ event, idx, onNavigate, compact = false }) {
           display: "flex",
           alignItems: "flex-end",
           padding: 16,
+          flexShrink: 0,
         }}
       >
-        {event.category && <CategoryPill cat={event.category} small />}
+        {event.category && (
+          <span
+            style={{
+              padding: "5px 12px",
+              borderRadius: radius.pill,
+              background: "rgba(9, 30, 66, 0.35)",
+              color: colors.white,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              fontFamily: fonts.body,
+            }}
+          >
+            {event.category}
+          </span>
+        )}
       </div>
 
-      <div style={{ padding: compact ? 16 : 20, flexGrow: 1, display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          padding: compact ? "18px 20px 20px" : "22px 24px 24px",
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          background: colors.surface,
+          gap: 0,
+        }}
+      >
         <h3
           style={{
-            margin: "0 0 8px",
+            margin: "0 0 10px",
             fontSize: compact ? 16 : 18,
             fontWeight: 700,
             color: colors.text,
             fontFamily: fonts.heading,
-            lineHeight: 1.3,
+            lineHeight: 1.35,
           }}
         >
           {event.title}
         </h3>
 
-        {event.org_name && (
+        {orgName && (
           <p
             style={{
-              margin: "0 0 6px",
-              fontSize: 13,
+              margin: "0 0 14px",
+              fontSize: 14,
               color: colors.primary,
               fontWeight: 600,
               fontFamily: fonts.body,
+              lineHeight: 1.4,
             }}
           >
-            {event.org_name || event.organization_name}
+            {orgName}
           </p>
         )}
 
-        <div style={{ marginBottom: 16, flexGrow: 1 }}>
+        <div style={{ marginBottom: 20, flexGrow: 1, display: "flex", flexDirection: "column", gap: 8 }}>
           {event.start_datetime && (
             <p
               style={{
-                margin: "0 0 4px",
+                margin: 0,
                 fontSize: 13,
                 color: colors.textSecondary,
                 fontFamily: fonts.body,
                 display: "flex",
-                alignItems: "center",
-                gap: 6,
+                alignItems: "flex-start",
+                gap: 8,
+                lineHeight: 1.5,
               }}
             >
-              <IconCalendar size={14} color={colors.textMuted} />
+              <span style={{ flexShrink: 0, marginTop: 2 }}>
+                <IconCalendar size={14} color={colors.textMuted} />
+              </span>
               {formatDate(event.start_datetime)}
             </p>
           )}
@@ -107,11 +137,14 @@ export default function EventCard({ event, idx, onNavigate, compact = false }) {
                 color: colors.textSecondary,
                 fontFamily: fonts.body,
                 display: "flex",
-                alignItems: "center",
-                gap: 6,
+                alignItems: "flex-start",
+                gap: 8,
+                lineHeight: 1.5,
               }}
             >
-              <IconMapPin size={14} color={colors.textMuted} />
+              <span style={{ flexShrink: 0, marginTop: 2 }}>
+                <IconMapPin size={14} color={colors.textMuted} />
+              </span>
               {event.location}
             </p>
           )}
@@ -125,7 +158,7 @@ export default function EventCard({ event, idx, onNavigate, compact = false }) {
           }}
           style={{
             width: "100%",
-            padding: "10px 16px",
+            padding: "11px 16px",
             borderRadius: radius.md,
             fontSize: 14,
             fontWeight: 700,
@@ -135,6 +168,7 @@ export default function EventCard({ event, idx, onNavigate, compact = false }) {
             cursor: "pointer",
             transition: "background 0.15s",
             fontFamily: fonts.body,
+            marginTop: "auto",
           }}
         >
           Детальніше

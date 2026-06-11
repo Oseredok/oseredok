@@ -381,7 +381,8 @@ def get_my_profile(current_user: User = Depends(get_current_user)):
         userId=current_user.user_id,
         email=current_user.email,
         full_name=current_user.full_name,
-        role=current_user.role
+        role=current_user.role,
+        faculty=current_user.faculty,
     )
 
 @app.patch("/users/me", response_model=UserProfileResponse)
@@ -392,13 +393,16 @@ def update_my_profile(
 ):
     if body.full_name is not None:
         current_user.full_name = body.full_name
+    if body.faculty is not None:
+        current_user.faculty = body.faculty
     db.commit()
     db.refresh(current_user)
     return UserProfileResponse(
         userId=current_user.user_id,
         email=current_user.email,
         full_name=current_user.full_name,
-        role=current_user.role
+        role=current_user.role,
+        faculty=current_user.faculty,
     )
 
 
@@ -407,8 +411,10 @@ def get_my_registrations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    regs = db.query(Registration, Event).join(
+    regs = db.query(Registration, Event, Organization).join(
         Event, Registration.event_id == Event.event_id
+    ).outerjoin(
+        Organization, Event.organization_id == Organization.organization_id
     ).filter(
         Registration.user_id == current_user.user_id,
         Registration.status != "cancelled"
@@ -424,9 +430,11 @@ def get_my_registrations(
                 "title": event.title,
                 "location": event.location,
                 "start_datetime": event.start_datetime,
+                "end_datetime": event.end_datetime,
+                "organization_name": org.name if org else None,
             }
         }
-        for reg, event in regs
+        for reg, event, org in regs
     ]
 
 
