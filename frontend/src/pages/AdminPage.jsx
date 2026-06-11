@@ -1,95 +1,335 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { API } from "../api";
+import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
 
-const API = "http://127.0.0.1:8000";
+const EMPTY_FORM = {
+  name: "",
+  handle: "",
+  description: "",
+  category: "",
+  faculty: "",
+  contact_email: "",
+  phone: "",
+  instagram: "",
+  telegram: "",
+  website: "",
+  status: "active",
+};
 
-export function AdminPage({ user }) {
+const CATEGORIES = ["IT", "Debates", "Art", "Science", "Sport", "Наука", "Спорт", "Мистецтво", "Громадська діяльність", "Інше"];
+
+function authHeaders() {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  };
+}
+
+function OrgForm({ form, setForm, onSubmit, submitting, message, submitLabel }) {
+  return (
+    <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {[
+        { name: "name", label: "Назва *", required: true },
+        { name: "handle", label: "Handle (URL)" },
+        { name: "faculty", label: "Факультет" },
+        { name: "contact_email", label: "Email", type: "email" },
+        { name: "phone", label: "Телефон" },
+        { name: "instagram", label: "Instagram" },
+        { name: "telegram", label: "Telegram" },
+        { name: "website", label: "Веб-сайт" },
+      ].map(({ name, label, type = "text", required }) => (
+        <div key={name}>
+          <label style={labelStyle}>{label}</label>
+          <input
+            type={type}
+            name={name}
+            value={form[name]}
+            onChange={(e) => setForm((f) => ({ ...f, [name]: e.target.value }))}
+            required={required}
+            style={inputStyle}
+          />
+        </div>
+      ))}
+
+      <div>
+        <label style={labelStyle}>Опис</label>
+        <textarea
+          name="description"
+          value={form.description}
+          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          rows={3}
+          style={{ ...inputStyle, resize: "vertical" }}
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>Категорія</label>
+        <select
+          name="category"
+          value={form.category}
+          onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+          style={{ ...inputStyle, background: colors.surface }}
+        >
+          <option value="">Оберіть категорію</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+
+      {form.status !== undefined && (
+        <div>
+          <label style={labelStyle}>Статус</label>
+          <select
+            value={form.status}
+            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+            style={{ ...inputStyle, background: colors.surface }}
+          >
+            <option value="active">Активна</option>
+            <option value="inactive">Неактивна</option>
+          </select>
+        </div>
+      )}
+
+      {message && (
+        <div style={{
+          padding: "10px 14px",
+          borderRadius: radius.sm,
+          background: message.includes("успіш") || message.includes("оновлено") || message.includes("видалено")
+            ? colors.successBg : colors.errorBg,
+          color: message.includes("успіш") || message.includes("оновлено") || message.includes("видалено")
+            ? colors.success : colors.error,
+          fontSize: 13,
+        }}>
+          {message}
+        </div>
+      )}
+
+      <button type="submit" disabled={submitting} style={primaryBtn(submitting)}>
+        {submitting ? "Збереження..." : submitLabel}
+      </button>
+    </form>
+  );
+}
+
+const labelStyle = {
+  display: "block",
+  fontSize: 12,
+  fontWeight: 600,
+  color: colors.textSecondary,
+  marginBottom: 6,
+  fontFamily: fonts.body,
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: radius.md,
+  border: `1px solid ${colors.border}`,
+  fontSize: 14,
+  outline: "none",
+  boxSizing: "border-box",
+  fontFamily: fonts.body,
+};
+
+function primaryBtn(disabled) {
+  return {
+    width: "100%",
+    padding: "12px",
+    borderRadius: radius.md,
+    fontSize: 15,
+    fontWeight: 700,
+    border: "none",
+    background: disabled ? colors.borderLight : colors.primary,
+    color: disabled ? colors.textMuted : colors.white,
+    cursor: disabled ? "not-allowed" : "pointer",
+    fontFamily: fonts.body,
+  };
+}
+
+function actionBtn(variant = "default") {
+  const styles = {
+    default: { bg: colors.surface, color: colors.text, border: colors.border },
+    primary: { bg: colors.primaryLight, color: colors.primary, border: colors.primaryMuted },
+    danger: { bg: colors.errorBg, color: colors.error, border: colors.error + "40" },
+    success: { bg: colors.successBg, color: colors.success, border: colors.success + "40" },
+  };
+  const s = styles[variant] || styles.default;
+  return {
+    padding: "6px 12px",
+    borderRadius: radius.sm,
+    fontSize: 12,
+    fontWeight: 600,
+    border: `1px solid ${s.border}`,
+    background: s.bg,
+    color: s.color,
+    cursor: "pointer",
+    fontFamily: fonts.body,
+  };
+}
+
+export function AdminPage({ user, onNavigateToOrg }) {
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    handle: "",
-    description: "",
-    category: "",
-    faculty: "",
-    contact_email: "",
-    phone: "",
-    instagram: "",
-    telegram: "",
-    website: "",
-  });
+  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState("Всі");
+  const [filterStatus, setFilterStatus] = useState("Всі");
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    fetchOrganizations();
-  }, []);
-
-  const fetchOrganizations = async () => {
+  const fetchOrganizations = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch(`${API}/organizations`);
       const data = await res.json();
       setOrganizations(data);
-    } catch (error) {
-      console.error("Failed to fetch organizations:", error);
+    } catch {
+      setMessage("Не вдалося завантажити організації");
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, [fetchOrganizations]);
+
+  const filtered = useMemo(() => {
+    return organizations.filter((org) => {
+      const matchSearch =
+        !search ||
+        org.name?.toLowerCase().includes(search.toLowerCase()) ||
+        org.handle?.toLowerCase().includes(search.toLowerCase());
+      const matchCat = filterCategory === "Всі" || org.category === filterCategory;
+      const matchStatus = filterStatus === "Всі" || (org.status || "active") === filterStatus;
+      return matchSearch && matchCat && matchStatus;
+    });
+  }, [organizations, search, filterCategory, filterStatus]);
+
+  const categories = useMemo(
+    () => ["Всі", ...new Set(organizations.map((o) => o.category).filter(Boolean))],
+    [organizations]
+  );
+
+  const stats = useMemo(() => ({
+    total: organizations.length,
+    active: organizations.filter((o) => (o.status || "active") === "active").length,
+    inactive: organizations.filter((o) => o.status === "inactive").length,
+  }), [organizations]);
+
+  const openCreate = () => {
+    setForm(EMPTY_FORM);
+    setEditingId(null);
+    setMessage("");
+    setModal("create");
   };
 
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const openEdit = (org) => {
+    setForm({
+      name: org.name || "",
+      handle: org.handle || "",
+      description: org.description || "",
+      category: org.category || "",
+      faculty: org.faculty || "",
+      contact_email: org.contact_email || "",
+      phone: org.phone || "",
+      instagram: org.instagram || "",
+      telegram: org.telegram || "",
+      website: org.website || "",
+      status: org.status || "active",
+    });
+    setEditingId(org.organization_id);
+    setMessage("");
+    setModal("edit");
   };
 
-  const handleSubmit = async (e) => {
+  const closeModal = () => {
+    setModal(null);
+    setMessage("");
+  };
+
+  const handleCreate = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setMessage("");
-
-    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API}/organizations`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
+        headers: authHeaders(),
+        body: JSON.stringify(form),
       });
-
       if (res.status === 201) {
-        setMessage("Організацію успішно створено!");
-        setFormData({
-          name: "",
-          handle: "",
-          description: "",
-          category: "",
-          faculty: "",
-          contact_email: "",
-          phone: "",
-          instagram: "",
-          telegram: "",
-          website: "",
-        });
-        setShowCreateForm(false);
+        closeModal();
         fetchOrganizations();
-      } else if (res.status === 403) {
-        setMessage("Тільки адміністратор може створювати організації");
-      } else if (res.status === 409) {
-        setMessage("Такий handle вже зайнято");
       } else {
-        setMessage("Помилка при створенні організації");
+        const data = await res.json().catch(() => ({}));
+        setMessage(data.detail || "Помилка при створенні");
       }
-    } catch (error) {
+    } catch {
       setMessage("Немає зв'язку з сервером");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setMessage("");
+    try {
+      const res = await fetch(`${API}/organizations/${editingId}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        closeModal();
+        fetchOrganizations();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setMessage(data.detail || "Помилка при оновленні");
+      }
+    } catch {
+      setMessage("Немає зв'язку з сервером");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleStatus = async (org) => {
+    const newStatus = (org.status || "active") === "active" ? "inactive" : "active";
+    try {
+      const res = await fetch(`${API}/organizations/${org.organization_id}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) fetchOrganizations();
+    } catch {
+      setMessage("Помилка зміни статусу");
+    }
+  };
+
+  const handleDelete = async (org) => {
+    if (!window.confirm(`Видалити організацію «${org.name}»? Цю дію не можна скасувати.`)) return;
+    try {
+      const res = await fetch(`${API}/organizations/${org.organization_id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (res.ok) fetchOrganizations();
+      else setMessage("Не вдалося видалити");
+    } catch {
+      setMessage("Немає зв'язку з сервером");
+    }
+  };
+
   if (loading) {
     return (
-      <div style={{ textAlign: "center", padding: 80, color: "#94a3b8", fontSize: 15 }}>
+      <div style={{ textAlign: "center", padding: 80, color: colors.textMuted, fontFamily: fonts.body }}>
         Завантаження...
       </div>
     );
@@ -97,403 +337,211 @@ export function AdminPage({ user }) {
 
   return (
     <div style={{ animation: "fadeUp 0.5s ease both" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", fontFamily: "'Playfair Display', serif", marginBottom: 8 }}>
+          <h1 style={{ fontSize: 32, fontWeight: 800, color: colors.text, fontFamily: fonts.heading, marginBottom: 6 }}>
             Адмін-панель
           </h1>
-          <p style={{ fontSize: 14, color: "#64748b" }}>Керування організаціями</p>
+          <p style={{ fontSize: 14, color: colors.textSecondary, fontFamily: fonts.body }}>
+            Керування організаціями · {user?.email}
+          </p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          style={{
-            padding: "12px 24px",
-            borderRadius: 12,
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button type="button" onClick={fetchOrganizations} style={actionBtn("default")}>
+            ↻ Оновити
+          </button>
+          <button type="button" onClick={openCreate} style={{
+            ...actionBtn("primary"),
+            padding: "10px 20px",
             fontSize: 14,
-            fontWeight: 700,
+            background: colors.primary,
+            color: colors.white,
             border: "none",
-            background: "linear-gradient(135deg, #2563eb, #3b82f6)",
-            color: "#fff",
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(37,99,235,0.3)",
-          }}
-        >
-          + Додати організацію
-        </button>
+          }}>
+            + Додати організацію
+          </button>
+        </div>
       </div>
 
-      {/* Organizations List */}
-      <div style={{ background: "#fff", borderRadius: 20, padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 20 }}>
-          Всі організації ({organizations.length})
-        </h2>
-        {organizations.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 40, color: "#94a3b8", fontSize: 14 }}>
-            Організацій ще немає
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }} className="admin-stats">
+        {[
+          { label: "Всього", value: stats.total, color: colors.primary },
+          { label: "Активних", value: stats.active, color: colors.success },
+          { label: "Неактивних", value: stats.inactive, color: colors.textMuted },
+        ].map((s) => (
+          <div key={s.label} style={{
+            background: colors.surface,
+            borderRadius: radius.lg,
+            padding: 20,
+            border: `1px solid ${colors.borderLight}`,
+            boxShadow: shadows.sm,
+          }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: s.color, fontFamily: fonts.heading }}>{s.value}</div>
+            <div style={{ fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{
+        background: colors.surface,
+        borderRadius: radius.lg,
+        padding: 16,
+        marginBottom: 20,
+        border: `1px solid ${colors.borderLight}`,
+        display: "flex",
+        gap: 12,
+        flexWrap: "wrap",
+        alignItems: "center",
+      }}>
+        <input
+          type="text"
+          placeholder="Пошук за назвою або handle..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ ...inputStyle, flex: 1, minWidth: 200 }}
+        />
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} style={{ ...inputStyle, width: "auto" }}>
+          {categories.map((c) => <option key={c} value={c}>{c === "Всі" ? "Усі категорії" : c}</option>)}
+        </select>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ ...inputStyle, width: "auto" }}>
+          <option value="Всі">Усі статуси</option>
+          <option value="active">Активні</option>
+          <option value="inactive">Неактивні</option>
+        </select>
+      </div>
+
+      <div style={{
+        background: colors.surface,
+        borderRadius: radius.xl,
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: shadows.sm,
+        overflow: "hidden",
+      }}>
+        <div style={{
+          padding: "16px 20px",
+          borderBottom: `1px solid ${colors.borderLight}`,
+          fontWeight: 700,
+          fontSize: 16,
+          fontFamily: fonts.heading,
+          color: colors.text,
+        }}>
+          Організації ({filtered.length})
+        </div>
+
+        {filtered.length === 0 ? (
+          <div style={{ padding: 48, textAlign: "center", color: colors.textMuted, fontFamily: fonts.body }}>
+            Організацій не знайдено
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {organizations.map((org) => (
-              <div
-                key={org.organization_id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "16px 20px",
-                  borderRadius: 12,
-                  border: "1.5px solid #e2e8f0",
-                  background: "#f8fafc",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <div
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 12,
-                      background: "#2563eb",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#fff",
-                      fontWeight: 800,
-                      fontSize: 18,
-                    }}
-                  >
-                    {org.logo_url ? (
-                      <img src={org.logo_url} alt="" style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }} />
-                    ) : (
-                      org.name?.[0] || "О"
-                    )}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>{org.name}</div>
-                    <div style={{ fontSize: 13, color: "#64748b" }}>{org.category || "Без категорії"}</div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <span style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, background: "#dcfce7", color: "#16a34a" }}>
-                    Активна
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: fonts.body, fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: colors.bg, textAlign: "left" }}>
+                  {["Організація", "Категорія", "Факультет", "Контакт", "Статус", "Дії"].map((h) => (
+                    <th key={h} style={{ padding: "12px 16px", fontWeight: 600, color: colors.textSecondary, fontSize: 12, textTransform: "uppercase" }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((org) => {
+                  const active = (org.status || "active") === "active";
+                  const catColor = categoryColors[org.category] || colors.primary;
+                  return (
+                    <tr key={org.organization_id} style={{ borderTop: `1px solid ${colors.borderLight}` }}>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div style={{ fontWeight: 700, color: colors.text }}>{org.name}</div>
+                        {org.handle && (
+                          <div style={{ fontSize: 12, color: colors.textMuted }}>@{org.handle}</div>
+                        )}
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        {org.category ? (
+                          <span style={{
+                            padding: "3px 10px",
+                            borderRadius: radius.pill,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: catColor + "18",
+                            color: catColor,
+                          }}>
+                            {org.category}
+                          </span>
+                        ) : "—"}
+                      </td>
+                      <td style={{ padding: "14px 16px", color: colors.textSecondary }}>{org.faculty || "—"}</td>
+                      <td style={{ padding: "14px 16px", color: colors.textSecondary, fontSize: 13 }}>
+                        {org.contact_email || org.phone || "—"}
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{
+                          padding: "4px 10px",
+                          borderRadius: radius.pill,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          background: active ? colors.successBg : colors.borderLight,
+                          color: active ? colors.success : colors.textMuted,
+                        }}>
+                          {active ? "Активна" : "Неактивна"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <button type="button" style={actionBtn("primary")} onClick={() => openEdit(org)}>Редагувати</button>
+                          <button type="button" style={actionBtn("default")} onClick={() => onNavigateToOrg?.(org)}>Переглянути</button>
+                          <button type="button" style={actionBtn(active ? "default" : "success")} onClick={() => toggleStatus(org)}>
+                            {active ? "Деактивувати" : "Активувати"}
+                          </button>
+                          <button type="button" style={actionBtn("danger")} onClick={() => handleDelete(org)}>Видалити</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
 
-      {/* Create Organization Modal */}
-      {showCreateForm && (
+      {modal && (
         <div
-          onClick={() => setShowCreateForm(false)}
+          onClick={closeModal}
           style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 200,
-            background: "rgba(15,23,42,0.45)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            position: "fixed", inset: 0, zIndex: 200,
+            background: colors.overlay,
+            display: "flex", alignItems: "center", justifyContent: "center",
             padding: 20,
-            animation: "fadeIn 0.15s ease",
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "#fff",
-              borderRadius: 20,
-              padding: "28px 28px 24px",
+              background: colors.surface,
+              borderRadius: radius.xl,
+              padding: 28,
               width: "100%",
-              maxWidth: 500,
+              maxWidth: 520,
               maxHeight: "90vh",
               overflowY: "auto",
-              boxShadow: "0 24px 80px rgba(0,0,0,0.15)",
-              animation: "slideUp 0.25s ease",
+              boxShadow: shadows.modal,
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-              <div>
-                <h2 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>
-                  Нова організація
-                </h2>
-                <p style={{ fontSize: 13, color: "#64748b" }}>Заповніть дані організації</p>
-              </div>
-              <button
-                onClick={() => setShowCreateForm(false)}
-                style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#94a3b8", lineHeight: 1, padding: 2 }}
-              >
-                ✕
-              </button>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 800, fontFamily: fonts.heading, color: colors.text }}>
+                {modal === "create" ? "Нова організація" : "Редагування організації"}
+              </h2>
+              <button type="button" onClick={closeModal} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: colors.textMuted }}>✕</button>
             </div>
-
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Назва *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    transition: "border-color 0.15s",
-                  }}
-                  placeholder="Назва організації"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Handle (URL-ідентифікатор)
-                </label>
-                <input
-                  type="text"
-                  name="handle"
-                  value={formData.handle}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    transition: "border-color 0.15s",
-                  }}
-                  placeholder="it-club"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Опис
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={3}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    resize: "vertical",
-                    transition: "border-color 0.15s",
-                  }}
-                  placeholder="Опис діяльності організації"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Категорія
-                </label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    background: "#fff",
-                  }}
-                >
-                  <option value="">Оберіть категорію</option>
-                  <option value="IT">IT</option>
-                  <option value="Наука">Наука</option>
-                  <option value="Спорт">Спорт</option>
-                  <option value="Мистецтво">Мистецтво</option>
-                  <option value="Громадська діяльність">Громадська діяльність</option>
-                  <option value="Інше">Інше</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Факультет
-                </label>
-                <input
-                  type="text"
-                  name="faculty"
-                  value={formData.faculty}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    transition: "border-color 0.15s",
-                  }}
-                  placeholder="Факультет інформатики"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Email контакту
-                </label>
-                <input
-                  type="email"
-                  name="contact_email"
-                  value={formData.contact_email}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    transition: "border-color 0.15s",
-                  }}
-                  placeholder="contact@org.com"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Телефон
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    transition: "border-color 0.15s",
-                  }}
-                  placeholder="+380 99 123 4567"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Instagram
-                </label>
-                <input
-                  type="text"
-                  name="instagram"
-                  value={formData.instagram}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    transition: "border-color 0.15s",
-                  }}
-                  placeholder="@organization"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Telegram
-                </label>
-                <input
-                  type="text"
-                  name="telegram"
-                  value={formData.telegram}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    transition: "border-color 0.15s",
-                  }}
-                  placeholder="@organization"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
-                  Веб-сайт
-                </label>
-                <input
-                  type="url"
-                  name="website"
-                  value={formData.website}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: 14,
-                    outline: "none",
-                    transition: "border-color 0.15s",
-                  }}
-                  placeholder="https://organization.com"
-                />
-              </div>
-
-              {message && (
-                <div
-                  style={{
-                    padding: "12px 16px",
-                    borderRadius: 10,
-                    background: message.includes("успішно") ? "#f0fdf4" : "#fef2f2",
-                    border: message.includes("успішно") ? "1px solid #bbf7d0" : "1px solid #fecaca",
-                    color: message.includes("успішно") ? "#16a34a" : "#dc2626",
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  {message}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={submitting}
-                style={{
-                  width: "100%",
-                  padding: "14px",
-                  borderRadius: 12,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  border: "none",
-                  background: submitting ? "#e2e8f0" : "linear-gradient(135deg, #2563eb, #3b82f6)",
-                  color: submitting ? "#94a3b8" : "#fff",
-                  cursor: submitting ? "not-allowed" : "pointer",
-                  boxShadow: submitting ? "none" : "0 4px 14px rgba(37,99,235,0.3)",
-                  transition: "all 0.15s",
-                }}
-              >
-                {submitting ? "Створення..." : "Створити організацію"}
-              </button>
-            </form>
+            <OrgForm
+              form={form}
+              setForm={setForm}
+              onSubmit={modal === "create" ? handleCreate : handleEdit}
+              submitting={submitting}
+              message={message}
+              submitLabel={modal === "create" ? "Створити організацію" : "Зберегти зміни"}
+            />
           </div>
         </div>
       )}

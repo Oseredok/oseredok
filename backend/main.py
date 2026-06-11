@@ -15,8 +15,26 @@ from schemas import (
     UserLoginRequest, TokenResponse,
     UserProfileResponse, RegistrationResponse,
     UserUpdateRequest, OrganizationCreateRequest,
-    EventCreateRequest
+    OrganizationUpdateRequest, EventCreateRequest
 )
+
+
+def org_to_dict(org: Organization) -> dict:
+    return {
+        "organization_id": org.organization_id,
+        "name": org.name,
+        "handle": org.handle,
+        "description": org.description,
+        "category": org.category,
+        "faculty": org.faculty,
+        "logo_url": org.logo_url,
+        "contact_email": org.contact_email,
+        "phone": org.phone,
+        "instagram": org.instagram,
+        "telegram": org.telegram,
+        "website": org.website,
+        "status": org.status or "active",
+    }
 
 app = FastAPI()
 
@@ -89,17 +107,7 @@ def get_organizations(
     if category:
         query = query.filter(Organization.category == category)
 
-    return [
-        {
-            "organization_id": org.organization_id,
-            "name": org.name,
-            "description": org.description,
-            "category": org.category,
-            "logo_url": org.logo_url,
-            "contact_email": org.contact_email,
-        }
-        for org in query.all()
-    ]
+    return [org_to_dict(org) for org in query.all()]
 
 
 @app.get("/organizations/{org_id}")
@@ -107,14 +115,52 @@ def get_organization(org_id: str, db: Session = Depends(get_db)):
     org = db.query(Organization).filter(Organization.organization_id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Організацію не знайдено")
-    return {
-        "organization_id": org.organization_id,
-        "name": org.name,
-        "description": org.description,
-        "category": org.category,
-        "logo_url": org.logo_url,
-        "contact_email": org.contact_email,
-    }
+    return org_to_dict(org)
+
+
+@app.patch("/organizations/{org_id}")
+def update_organization(
+    org_id: str,
+    body: OrganizationUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Тільки адміністратор може редагувати організації")
+
+    org = db.query(Organization).filter(Organization.organization_id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Організацію не знайдено")
+
+    if body.handle and body.handle != org.handle:
+        existing = db.query(Organization).filter(Organization.handle == body.handle).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Такий handle вже зайнято")
+
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(org, field, value)
+
+    db.commit()
+    db.refresh(org)
+    return org_to_dict(org)
+
+
+@app.delete("/organizations/{org_id}")
+def delete_organization(
+    org_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Тільки адміністратор може видаляти організації")
+
+    org = db.query(Organization).filter(Organization.organization_id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Організацію не знайдено")
+
+    db.delete(org)
+    db.commit()
+    return {"message": "Організацію видалено"}
 
 
 @app.post("/organizations", status_code=201)

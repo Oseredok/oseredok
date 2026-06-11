@@ -174,7 +174,7 @@ export default function App() {
         )}
 
         {view === "admin" && user?.role === "admin" && (
-          <AdminPage user={user} />
+          <AdminPage user={user} onNavigateToOrg={navigateToOrg} />
         )}
 
         {view === "create-event" && user && (
