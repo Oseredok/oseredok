@@ -174,11 +174,12 @@ export default function App() {
             user={user}
             onBack={() => navigate("events")}
             onOpenAuth={setPage}
+            onNavigateToOrg={navigateToOrg}
           />
         )}
 
         {view === "profile" && (
-          <ProfilePage user={user} onNavigateToEvent={navigateToEvent} />
+          <ProfilePage user={user} onNavigateToEvent={navigateToEvent} onNavigate={navigate} />
         )}
 
         {view === "admin" && user?.role === "admin" && (

@@ -46,6 +46,7 @@ class UserProfileResponse(BaseModel):
     email: str
     full_name: str | None = None
     role: str | None = None
+    faculty: str | None = None
 
 
 class RegistrationResponse(BaseModel):
@@ -56,6 +57,7 @@ class RegistrationResponse(BaseModel):
 
 class UserUpdateRequest(BaseModel):
     full_name: str | None = None
+    faculty: str | None = None
 
 
 class OrganizationCreateRequest(BaseModel):

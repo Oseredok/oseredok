@@ -186,20 +186,31 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
               flex: 1,
               display: "flex",
               alignItems: "stretch",
+              justifyContent: "center",
               gap: 10,
               minWidth: 0,
             }}
           >
-            <SearchField
-              value={searchInput}
-              onChange={setSearchInput}
-              placeholder={activeTab === "organizations" ? "Пошук організацій..." : "Пошук подій..."}
-            />
-            <FilterDropdown
-              categories={categories}
-              activeCategory={activeCategory}
-              onChange={setActiveCategory}
-            />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "stretch",
+                gap: 10,
+                width: "100%",
+                maxWidth: 380,
+              }}
+            >
+              <SearchField
+                value={searchInput}
+                onChange={setSearchInput}
+                placeholder={activeTab === "organizations" ? "Пошук..." : "Пошук..."}
+              />
+              <FilterDropdown
+                categories={categories}
+                activeCategory={activeCategory}
+                onChange={setActiveCategory}
+              />
+            </div>
           </div>
 
           <button
