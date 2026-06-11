@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
 
 
@@ -16,6 +16,13 @@ class UserRegisterRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str | None = None
+
+    @field_validator("email")
+    @classmethod
+    def email_must_be_ukma(cls, v: str) -> str:
+        if not v.endswith("@ukma.edu.ua"):
+            raise ValueError("Дозволені лише адреси з доменом @ukma.edu.ua")
+        return v
 
 
 class UserRegisterResponse(BaseModel):
