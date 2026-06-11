@@ -3,7 +3,7 @@ import { Field } from "./Field";
 
 const API = "http://127.0.0.1:8000";
 
-export function Modal({ page, onClose, onSuccess }) {
+export function Modal({ page, onPageChange, onClose, onSuccess }) {
   const [form, setForm] = useState({ email: "", password: "", confirm: "", full_name: "" });
   const [errors, setErrors] = useState({});
   const [serverMsg, setServerMsg] = useState("");
@@ -135,7 +135,7 @@ export function Modal({ page, onClose, onSuccess }) {
         <p style={{ textAlign: "center", fontSize: 13, color: "#64748b" }}>
           {page === "login" ? "Ще немає акаунту?" : "Вже є акаунт?"}{" "}
           <button
-            onClick={() => onSuccess === undefined ? onClose() : null}
+            onClick={() => onPageChange?.(page === "login" ? "register" : "login")}
             style={{ background: "none", border: "none", color: "#1a56db", fontWeight: 600, cursor: "pointer", fontSize: 13, padding: 0 }}
           >
             {page === "login" ? "Зареєструватись" : "Увійти"}
