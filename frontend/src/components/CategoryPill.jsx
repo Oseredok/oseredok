@@ -1,4 +1,4 @@
-import { categoryColors, colors, fonts, radius } from "../../theme/tokens";
+import { categoryColors, colors, fonts, radius } from "../theme/tokens";
 
 export default function CategoryPill({ cat, small }) {
   const color = categoryColors[cat] || categoryColors.default;
