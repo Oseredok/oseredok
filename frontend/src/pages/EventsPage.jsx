@@ -71,7 +71,7 @@ function FilterDropdown({ categories, activeCategory, onChange }) {
   );
 }
 
-export function EventsPage({ onTabChange, user, onNavigateToEvent }) {
+export function EventsPage({ onTabChange, user, onNavigateToEvent, onViewChange }) {
   const [allEvents, setAllEvents] = useState([]);  // ✅ виправлено
   const [loading, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -162,6 +162,18 @@ export function EventsPage({ onTabChange, user, onNavigateToEvent }) {
           </div>
 
           <FilterDropdown categories={allCategories} activeCategory={activeCategory} onChange={setActiveCategory} />
+
+          <button
+            onClick={() => onViewChange("create-event")}
+            style={{
+              padding: "9px 20px", borderRadius: 10, fontSize: 13, fontWeight: 700,
+              border: "none", background: "linear-gradient(135deg, #2563eb, #3b82f6)",
+              color: "#fff", cursor: "pointer", boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
+              transition: "all 0.15s",
+            }}
+          >
+            + Створити подію
+          </button>
         </div>
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 36, flexWrap: "wrap" }}>
