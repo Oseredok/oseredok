@@ -294,10 +294,10 @@ export default function OrganizationFormFields({
                   fontWeight: 700,
                 }}
               >
-                {selectedOwner.name[0]}
+                {(selectedOwner.full_name || selectedOwner.name || selectedOwner.email)?.[0]?.toUpperCase() || "?"}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{selectedOwner.name}</div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{selectedOwner.name || selectedOwner.full_name}</div>
                 <div style={{ fontSize: 13, color: colors.textSecondary }}>{selectedOwner.email}</div>
               </div>
               <span style={{ color: colors.primary }}><IconCheck size={20} color={colors.primary} /></span>

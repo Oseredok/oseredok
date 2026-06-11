@@ -5,6 +5,7 @@ import SkeletonCard from "../components/cards/SkeletonCard";
 import FilterDropdown from "../components/FilterDropdown";
 import SearchField from "../components/SearchField";
 import { useDebounce } from "../hooks/useDebounce";
+import { canCreateEvent } from "../utils/roles";
 import { categoryColors, colors, fonts, radius } from "../theme/tokens";
 
 export default function EventsPage({ user, onNavigateToEvent, onViewChange }) {
@@ -101,7 +102,7 @@ export default function EventsPage({ user, onNavigateToEvent, onViewChange }) {
             onChange={setActiveCategory}
           />
 
-          {user && (
+          {canCreateEvent(user?.role) && (
             <button
               type="button"
               onClick={() => onViewChange("create-event")}

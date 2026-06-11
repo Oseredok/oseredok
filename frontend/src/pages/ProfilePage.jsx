@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { API } from "../api";
+import { roleLabel } from "../utils/roles";
 import {
   IconCalendar,
   IconChevronRight,
@@ -38,12 +39,6 @@ function getInitials(fullName, email) {
       : parts[0].slice(0, 2).toUpperCase();
   }
   return email?.slice(0, 2).toUpperCase() || "?";
-}
-
-function roleLabel(role) {
-  if (role === "admin") return "Адмін";
-  if (role === "student") return "Студент";
-  return role || "—";
 }
 
 function formatEventTime(iso) {

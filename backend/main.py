@@ -9,7 +9,7 @@ import uuid
 import os
 
 from database import get_db
-from models import Organization, User, Event, Registration
+from models import Organization, User, Event, Registration, OrganizationMember
 from schemas import (
     UserRegisterRequest, UserRegisterResponse,
     UserLoginRequest, TokenResponse,
@@ -17,6 +17,7 @@ from schemas import (
     UserUpdateRequest, OrganizationCreateRequest,
     OrganizationUpdateRequest, EventCreateRequest
 )
+from roles import is_admin, can_create_events
 
 
 def org_to_dict(org: Organization) -> dict:
@@ -125,7 +126,7 @@ def update_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "admin":
+    if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Тільки адміністратор може редагувати організації")
 
     org = db.query(Organization).filter(Organization.organization_id == org_id).first()
@@ -151,7 +152,7 @@ def delete_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "admin":
+    if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Тільки адміністратор може видаляти організації")
 
     org = db.query(Organization).filter(Organization.organization_id == org_id).first()
@@ -169,7 +170,7 @@ def create_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Тільки адміністратор може створювати організації")
     
     existing_handle = db.query(Organization).filter(Organization.handle == body.handle).first()
@@ -193,6 +194,22 @@ def create_organization(
         created_at=datetime.utcnow()
     )
     db.add(new_org)
+    db.flush()
+
+    if body.owner_id:
+        owner = db.query(User).filter(User.user_id == body.owner_id).first()
+        if not owner:
+            raise HTTPException(status_code=404, detail="Власника не знайдено")
+        if owner.role == "student":
+            owner.role = "org_owner"
+        db.add(OrganizationMember(
+            membership_id=str(uuid.uuid4()),
+            user_id=owner.user_id,
+            organization_id=new_org.organization_id,
+            role_in_org="owner",
+            joined_at=datetime.utcnow(),
+        ))
+
     db.commit()
     db.refresh(new_org)
     return {
@@ -283,9 +300,20 @@ def create_event(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if not can_create_events(current_user):
+        raise HTTPException(status_code=403, detail="Немає прав на створення подій")
+
     org = db.query(Organization).filter(Organization.organization_id == body.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Організацію не знайдено")
+
+    if not is_admin(current_user):
+        membership = db.query(OrganizationMember).filter(
+            OrganizationMember.user_id == current_user.user_id,
+            OrganizationMember.organization_id == body.organization_id,
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=403, detail="Можна створювати події лише для своїх організацій")
     
     new_event = Event(
         event_id=str(uuid.uuid4()),
@@ -374,6 +402,52 @@ def cancel_registration(
 
 
 # --- Профіль ---
+
+@app.get("/users/search")
+def search_users(
+    q: str = Query(min_length=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+
+    users = (
+        db.query(User)
+        .filter(
+            (User.full_name.ilike(f"%{q}%")) | (User.email.ilike(f"%{q}%"))
+        )
+        .limit(10)
+        .all()
+    )
+    return [
+        {
+            "user_id": u.user_id,
+            "full_name": u.full_name,
+            "email": u.email,
+            "role": u.role,
+        }
+        for u in users
+    ]
+
+
+@app.get("/users/me/organizations")
+def get_my_organizations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if is_admin(current_user):
+        orgs = db.query(Organization).order_by(Organization.name).all()
+    else:
+        orgs = (
+            db.query(Organization)
+            .join(OrganizationMember, Organization.organization_id == OrganizationMember.organization_id)
+            .filter(OrganizationMember.user_id == current_user.user_id)
+            .order_by(Organization.name)
+            .all()
+        )
+    return [org_to_dict(o) for o in orgs]
+
 
 @app.get("/users/me", response_model=UserProfileResponse)
 def get_my_profile(current_user: User = Depends(get_current_user)):

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { API } from "../api";
+import EventRegistrationModal from "../components/EventRegistrationModal";
 import {
   IconArrowLeft,
   IconCalendar,
@@ -91,6 +92,9 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [modalError, setModalError] = useState("");
 
   const orgName = event.organization_name || event.org_name;
   const participants = event.participants_count ?? 0;
@@ -109,12 +113,16 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
 
       const token = localStorage.getItem("token");
       if (token) {
-        const regRes = await fetch(`${API}/users/me/registrations`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const [regRes, profileRes] = await Promise.all([
+          fetch(`${API}/users/me/registrations`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API}/users/me`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
         if (regRes.ok) {
           const regs = await regRes.json();
           setRegistered(regs.some((r) => r.event?.event_id === initialEvent.event_id));
+        }
+        if (profileRes.ok) {
+          setProfile(await profileRes.json());
         }
       } else {
         setRegistered(false);
@@ -137,6 +145,7 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
     }
     setSubmitting(true);
     setMessage("");
+    setModalError("");
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API}/events/${event.event_id}/register`, {
@@ -145,18 +154,32 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
       });
       if (res.ok) {
         setRegistered(true);
+        setShowRegisterModal(false);
         setMessage("Ви успішно зареєстровані на подію");
         const updated = await fetch(`${API}/events/${event.event_id}`).then((r) => r.json());
         setEvent(updated);
       } else {
         const data = await res.json().catch(() => ({}));
-        setMessage(data.detail || "Не вдалося зареєструватись");
+        const err = data.detail || "Не вдалося зареєструватись";
+        setModalError(err);
+        setMessage(err);
       }
     } catch {
-      setMessage("Немає зв'язку з сервером");
+      const err = "Немає зв'язку з сервером";
+      setModalError(err);
+      setMessage(err);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const openRegisterModal = () => {
+    if (!user) {
+      onOpenAuth?.("login");
+      return;
+    }
+    setModalError("");
+    setShowRegisterModal(true);
   };
 
   const handleCancel = async () => {
@@ -383,14 +406,26 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
         ) : (
           <button
             type="button"
-            onClick={handleRegister}
-            disabled={submitting || loading || isFull}
-            style={primaryBtn(submitting || loading || isFull)}
+            onClick={openRegisterModal}
+            disabled={loading || isFull}
+            style={primaryBtn(loading || isFull)}
           >
-            {submitting ? "Реєстрація..." : isFull ? "Місця закінчилися" : "Зареєструватись на подію"}
+            {isFull ? "Місця закінчилися" : "Зареєструватись на подію"}
           </button>
         )}
       </div>
+
+      {showRegisterModal && (
+        <EventRegistrationModal
+          event={event}
+          profile={profile}
+          user={user}
+          onClose={() => setShowRegisterModal(false)}
+          onConfirm={handleRegister}
+          submitting={submitting}
+          error={modalError}
+        />
+      )}
 
       {/* Organizer card */}
       {orgName && (

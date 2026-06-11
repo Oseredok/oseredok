@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-
-const API = "http://127.0.0.1:8000";
+import { API } from "../api";
+import { colors, fonts, radius } from "../theme/tokens";
 
 export function CreateEventPage({ user, onSuccess }) {
   const [organizations, setOrganizations] = useState([]);
@@ -23,9 +23,12 @@ export function CreateEventPage({ user, onSuccess }) {
 
   const fetchOrganizations = async () => {
     try {
-      const res = await fetch(`${API}/organizations`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API}/users/me/organizations`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
-      setOrganizations(data);
+      setOrganizations(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch organizations:", error);
     } finally {
@@ -84,8 +87,21 @@ export function CreateEventPage({ user, onSuccess }) {
 
   if (loading) {
     return (
-      <div style={{ textAlign: "center", padding: 80, color: "#94a3b8", fontSize: 15 }}>
+      <div style={{ textAlign: "center", padding: 80, color: colors.textMuted, fontFamily: fonts.body }}>
         Завантаження...
+      </div>
+    );
+  }
+
+  if (organizations.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: 80, animation: "fadeUp 0.5s ease both" }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: colors.text, fontFamily: fonts.heading, marginBottom: 8 }}>
+          Немає доступних організацій
+        </h2>
+        <p style={{ fontSize: 14, color: colors.textSecondary, fontFamily: fonts.body }}>
+          Створення подій доступне лише для організацій, до яких ви привʼязані як організатор.
+        </p>
       </div>
     );
   }
