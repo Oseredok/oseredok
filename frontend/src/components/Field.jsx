@@ -1,4 +1,4 @@
-import { colors, fonts, radius, shadows } from "../../theme/tokens";
+import { colors, fonts, radius, shadows } from "../theme/tokens";
 
 const placeholders = {
   email: "ім'я@ukma.edu.ua",
