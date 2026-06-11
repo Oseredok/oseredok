@@ -1,4 +1,5 @@
 import CategoryPill from "../components/CategoryPill";
+import { IconArrowLeft } from "../components/ui/Icons";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
 
 export default function OrgDetailPage({ org, onBack }) {
@@ -35,7 +36,8 @@ export default function OrgDetailPage({ org, onBack }) {
           e.currentTarget.style.color = colors.textSecondary;
         }}
       >
-        ← Назад до організацій
+        <IconArrowLeft size={16} />
+        Назад до організацій
       </button>
 
       <div

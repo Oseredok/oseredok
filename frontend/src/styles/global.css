@@ -49,7 +49,9 @@ body {
 @media (max-width: 900px) {
   .cards-grid { grid-template-columns: repeat(2, 1fr); }
   .detail-grid { grid-template-columns: 1fr; }
-  .home-split { grid-template-columns: 1fr !important; }
+  .home-nav-bar { flex-wrap: wrap; }
+  .home-nav-bar > button { flex: 1; min-width: 120px; }
+  .home-nav-bar > div { flex: 1 1 100%; order: 3; }
 }
 
 @media (max-width: 600px) {

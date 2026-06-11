@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { API } from "../api";
 import OrgCard from "../components/cards/OrgCard";
 import SkeletonCard from "../components/cards/SkeletonCard";
+import SearchField from "../components/SearchField";
 import { useDebounce } from "../hooks/useDebounce";
 import { categoryColors, colors, fonts, radius } from "../theme/tokens";
 
@@ -73,70 +74,11 @@ export default function OrganizationsPage({ onNavigateToOrg }) {
       </div>
 
       <div style={{ marginBottom: 28, display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ position: "relative" }}>
-          <div
-            style={{
-              position: "absolute",
-              left: 14,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: colors.textMuted,
-              fontSize: 16,
-              pointerEvents: "none",
-            }}
-          >
-            ⌕
-          </div>
-          <input
-            type="text"
-            placeholder="Пошук за назвою..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 16px 12px 42px",
-              borderRadius: radius.md,
-              fontSize: 14,
-              fontFamily: fonts.body,
-              border: `1px solid ${colors.border}`,
-              background: colors.surface,
-              color: colors.text,
-              outline: "none",
-              boxSizing: "border-box",
-              transition: "border-color 0.15s, box-shadow 0.15s",
-              boxShadow: "0 1px 2px rgba(9,30,66,0.06)",
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = colors.primary;
-              e.target.style.boxShadow = "0 0 0 3px rgba(0,82,204,0.12)";
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = colors.border;
-              e.target.style.boxShadow = "0 1px 2px rgba(9,30,66,0.06)";
-            }}
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => setSearchInput("")}
-              style={{
-                position: "absolute",
-                right: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "none",
-                border: "none",
-                color: colors.textMuted,
-                cursor: "pointer",
-                fontSize: 16,
-                padding: 4,
-                lineHeight: 1,
-              }}
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <SearchField
+          value={searchInput}
+          onChange={setSearchInput}
+          placeholder="Пошук за назвою..."
+        />
 
         {categories.length > 1 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

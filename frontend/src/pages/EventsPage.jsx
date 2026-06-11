@@ -1,97 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { API } from "../api";
 import EventCard from "../components/cards/EventCard";
 import SkeletonCard from "../components/cards/SkeletonCard";
+import FilterDropdown from "../components/FilterDropdown";
+import SearchField from "../components/SearchField";
 import { useDebounce } from "../hooks/useDebounce";
 import { categoryColors, colors, fonts, radius } from "../theme/tokens";
-
-function FilterDropdown({ categories, activeCategory, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "10px 16px",
-          borderRadius: radius.md,
-          fontSize: 13,
-          fontWeight: 600,
-          border: `1px solid ${activeCategory !== "Всі" ? colors.primary : colors.border}`,
-          background: activeCategory !== "Всі" ? colors.primaryLight : colors.surface,
-          color: activeCategory !== "Всі" ? colors.primary : colors.textSecondary,
-          cursor: "pointer",
-          whiteSpace: "nowrap",
-          fontFamily: fonts.body,
-        }}
-      >
-        {activeCategory === "Всі" ? "Категорія" : activeCategory}
-        <span style={{ fontSize: 10 }}>{open ? "▲" : "▼"}</span>
-      </button>
-
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 8px)",
-            left: 0,
-            background: colors.surface,
-            borderRadius: radius.lg,
-            border: `1px solid ${colors.border}`,
-            boxShadow: "0 8px 24px rgba(9,30,66,0.12)",
-            zIndex: 100,
-            minWidth: 180,
-            overflow: "hidden",
-          }}
-        >
-          {["Всі", ...categories].map((cat) => {
-            const isActive = cat === activeCategory;
-            const color =
-              cat === "Всі" ? colors.primary : categoryColors[cat] || categoryColors.default;
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => {
-                  onChange(cat);
-                  setOpen(false);
-                }}
-                style={{
-                  width: "100%",
-                  padding: "10px 16px",
-                  textAlign: "left",
-                  fontSize: 13,
-                  fontWeight: isActive ? 700 : 500,
-                  background: isActive ? colors.primaryLight : "transparent",
-                  color: isActive ? color : colors.text,
-                  border: "none",
-                  cursor: "pointer",
-                  borderLeft: isActive ? `3px solid ${color}` : "3px solid transparent",
-                  fontFamily: fonts.body,
-                }}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function EventsPage({ user, onNavigateToEvent, onViewChange }) {
   const [allEvents, setAllEvents] = useState([]);
@@ -175,69 +89,11 @@ export default function EventsPage({ user, onNavigateToEvent, onViewChange }) {
             flexWrap: "wrap",
           }}
         >
-          <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-            <div
-              style={{
-                position: "absolute",
-                left: 14,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: colors.textMuted,
-                fontSize: 16,
-                pointerEvents: "none",
-              }}
-            >
-              ⌕
-            </div>
-            <input
-              type="text"
-              placeholder="Пошук за назвою..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px 16px 12px 42px",
-                borderRadius: radius.md,
-                fontSize: 14,
-                fontFamily: fonts.body,
-                border: `1px solid ${colors.border}`,
-                background: colors.surface,
-                color: colors.text,
-                outline: "none",
-                boxSizing: "border-box",
-                transition: "border-color 0.15s, box-shadow 0.15s",
-                boxShadow: "0 1px 2px rgba(9,30,66,0.06)",
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = colors.primary;
-                e.target.style.boxShadow = "0 0 0 3px rgba(0,82,204,0.12)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = colors.border;
-                e.target.style.boxShadow = "0 1px 2px rgba(9,30,66,0.06)";
-              }}
-            />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={() => setSearchInput("")}
-                style={{
-                  position: "absolute",
-                  right: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  color: colors.textMuted,
-                  cursor: "pointer",
-                  fontSize: 16,
-                  padding: 4,
-                }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
+          <SearchField
+            value={searchInput}
+            onChange={setSearchInput}
+            placeholder="Пошук за назвою..."
+          />
 
           <FilterDropdown
             categories={allCategories}

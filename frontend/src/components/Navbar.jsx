@@ -12,7 +12,7 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
   const isActive = (id) => {
     if (id === "organizations") return view === "organizations" || view === "org-detail";
     if (id === "events") return view === "events" || view === "event-detail" || view === "create-event";
-    if (id === "admin") return view === "admin";
+    if (id === "admin") return view === "admin" || view === "admin-create-org" || view === "admin-edit-org";
     return false;
   };
 

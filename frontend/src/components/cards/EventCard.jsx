@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { categoryColors, colors, fonts, radius, shadows } from "../../theme/tokens";
 import CategoryPill from "../CategoryPill";
+import { IconCalendar, IconMapPin } from "../ui/Icons";
 
 function formatDate(iso) {
   if (!iso) return "";
@@ -83,13 +84,35 @@ export default function EventCard({ event, idx, onNavigate, compact = false }) {
 
         <div style={{ marginBottom: 16, flexGrow: 1 }}>
           {event.start_datetime && (
-            <p style={{ margin: "0 0 4px", fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body }}>
-              📅 {formatDate(event.start_datetime)}
+            <p
+              style={{
+                margin: "0 0 4px",
+                fontSize: 13,
+                color: colors.textSecondary,
+                fontFamily: fonts.body,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <IconCalendar size={14} color={colors.textMuted} />
+              {formatDate(event.start_datetime)}
             </p>
           )}
           {event.location && (
-            <p style={{ margin: 0, fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body }}>
-              📍 {event.location}
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13,
+                color: colors.textSecondary,
+                fontFamily: fonts.body,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <IconMapPin size={14} color={colors.textMuted} />
+              {event.location}
             </p>
           )}
         </div>

@@ -3,7 +3,9 @@ import { API } from "./api";
 import Navbar from "./components/Navbar";
 import Modal from "./components/Modal";
 import { AdminPage } from "./pages/AdminPage";
+import { AdminOrgEditPage } from "./pages/AdminOrgEditPage";
 import { CreateEventPage } from "./pages/CreateEventPage";
+import { CreateOrganizationPage } from "./pages/CreateOrganizationPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
 import HomePage from "./pages/HomePage";
@@ -98,6 +100,12 @@ export default function App() {
       setView("profile");
     } else if (target === "admin") {
       setView("admin");
+      setSelectedOrg(null);
+    } else if (target === "admin-create-org") {
+      setView("admin-create-org");
+    } else if (target === "admin-edit-org") {
+      if (item) setSelectedOrg(item);
+      setView("admin-edit-org");
     } else if (target === "create-event") {
       setView("create-event");
     }
@@ -174,7 +182,28 @@ export default function App() {
         )}
 
         {view === "admin" && user?.role === "admin" && (
-          <AdminPage user={user} onNavigateToOrg={navigateToOrg} />
+          <AdminPage
+            user={user}
+            onCreateOrg={() => navigate("admin-create-org")}
+            onEditOrg={(org) => navigate("admin-edit-org", org)}
+            onNavigateToOrg={navigateToOrg}
+          />
+        )}
+
+        {view === "admin-create-org" && user?.role === "admin" && (
+          <CreateOrganizationPage
+            onCancel={() => navigate("admin")}
+            onSuccess={() => navigate("admin")}
+          />
+        )}
+
+        {view === "admin-edit-org" && user?.role === "admin" && selectedOrg && (
+          <AdminOrgEditPage
+            org={selectedOrg}
+            onBack={() => navigate("admin")}
+            onCreateEvent={() => navigate("create-event")}
+            onNavigateToEvent={navigateToEvent}
+          />
         )}
 
         {view === "create-event" && user && (
