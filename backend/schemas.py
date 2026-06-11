@@ -56,3 +56,27 @@ class RegistrationResponse(BaseModel):
 
 class UserUpdateRequest(BaseModel):
     full_name: str | None = None
+
+
+class OrganizationCreateRequest(BaseModel):
+    name: str
+    handle: str | None = None
+    description: str | None = None
+    category: str | None = None
+    faculty: str | None = None
+    logo_url: str | None = None
+    contact_email: str | None = None
+    phone: str | None = None
+    instagram: str | None = None
+    telegram: str | None = None
+    website: str | None = None
+
+
+class EventCreateRequest(BaseModel):
+    organization_id: str
+    title: str
+    description: str | None = None
+    location: str | None = None
+    start_datetime: datetime
+    end_datetime: datetime
+    max_participants: int | None = None
