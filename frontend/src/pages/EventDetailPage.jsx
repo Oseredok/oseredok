@@ -1,4 +1,5 @@
 import CategoryPill from "../components/CategoryPill";
+import { IconArrowLeft } from "../components/ui/Icons";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
 
 function formatDate(iso) {
@@ -47,7 +48,8 @@ export default function EventDetailPage({ event, user, onBack, onOpenAuth }) {
           e.currentTarget.style.color = colors.textSecondary;
         }}
       >
-        ← Назад до подій
+        <IconArrowLeft size={16} />
+        Назад до подій
       </button>
 
       <div

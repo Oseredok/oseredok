@@ -1,32 +1,80 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { API } from "../api";
 import OrgCard from "../components/cards/OrgCard";
 import EventCard from "../components/cards/EventCard";
+import SkeletonCard from "../components/cards/SkeletonCard";
+import FilterDropdown from "../components/FilterDropdown";
+import SearchField from "../components/SearchField";
+import { IconArrowRight } from "../components/ui/Icons";
 import { useCount } from "../hooks/useCount";
+import { useDebounce } from "../hooks/useDebounce";
 import { colors, fonts, radius } from "../theme/tokens";
 
+function tabBtn(active) {
+  return {
+    padding: "11px 24px",
+    borderRadius: radius.md,
+    fontSize: 14,
+    fontWeight: 700,
+    border: active ? "none" : `1.5px solid ${colors.border}`,
+    background: active ? colors.primary : colors.surface,
+    color: active ? colors.white : colors.textSecondary,
+    cursor: "pointer",
+    fontFamily: fonts.body,
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    boxShadow: active ? "0 2px 8px rgba(0,82,204,0.2)" : "none",
+    transition: "all 0.15s",
+  };
+}
+
 export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
-  const [featuredOrgs, setFeaturedOrgs] = useState([]);
-  const [featuredEvents, setFeaturedEvents] = useState([]);
+  const [activeTab, setActiveTab] = useState("organizations");
+  const [organizations, setOrganizations] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState("");
+  const [activeCategory, setActiveCategory] = useState("Всі");
+  const debouncedSearch = useDebounce(searchInput, 300);
   const animatedCount = useCount(orgCount);
 
   useEffect(() => {
-    fetch(`${API}/organizations`)
-      .then((r) => r.json())
-      .then((data) => setFeaturedOrgs(data.slice(0, 4)))
-      .catch(() => {});
-    fetch(`${API}/events`)
-      .then((r) => r.json())
-      .then((data) => setFeaturedEvents(data.slice(0, 4)))
-      .catch(() => {});
-  }, []);
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (activeCategory !== "Всі") params.set("category", activeCategory);
+
+    const orgUrl = `${API}/organizations${params.toString() ? "?" + params.toString() : ""}`;
+    const eventUrl = `${API}/events${params.toString() ? "?" + params.toString() : ""}`;
+
+    Promise.all([
+      fetch(orgUrl).then((r) => (r.ok ? r.json() : [])),
+      fetch(eventUrl).then((r) => (r.ok ? r.json() : [])),
+    ])
+      .then(([orgs, evts]) => {
+        setOrganizations(orgs);
+        setEvents(evts);
+      })
+      .catch(() => {
+        setOrganizations([]);
+        setEvents([]);
+      })
+      .finally(() => setLoading(false));
+  }, [debouncedSearch, activeCategory]);
+
+  const categories = useMemo(() => {
+    const source = activeTab === "organizations" ? organizations : events;
+    return [...new Set(source.map((item) => item.category).filter(Boolean))];
+  }, [activeTab, organizations, events]);
+
+  const items = activeTab === "organizations" ? organizations : events;
 
   return (
     <div>
       <section
         style={{
           textAlign: "center",
-          marginBottom: 48,
+          marginBottom: 40,
           padding: "32px 0 0",
           animation: "fadeUp 0.6s ease both",
         }}
@@ -93,7 +141,6 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
             justifyContent: "center",
             gap: 40,
             flexWrap: "wrap",
-            marginBottom: 8,
           }}
         >
           {[
@@ -102,24 +149,10 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
             { label: "подій на рік", value: "50+" },
           ].map((s, i) => (
             <div key={i} style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: 28,
-                  fontWeight: 800,
-                  color: colors.primary,
-                  fontFamily: fonts.heading,
-                }}
-              >
+              <div style={{ fontSize: 28, fontWeight: 800, color: colors.primary, fontFamily: fonts.heading }}>
                 {s.value}
               </div>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: colors.textMuted,
-                  fontWeight: 500,
-                  fontFamily: fonts.body,
-                }}
-              >
+              <div style={{ fontSize: 13, color: colors.textMuted, fontWeight: 500, fontFamily: fonts.body }}>
                 {s.label}
               </div>
             </div>
@@ -127,143 +160,118 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
         </div>
       </section>
 
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 32,
-          animation: "fadeUp 0.6s ease 0.15s both",
-        }}
-        className="home-split"
-      >
+      <section style={{ animation: "fadeUp 0.6s ease 0.15s both" }}>
         <div
           style={{
-            background: colors.surface,
-            borderRadius: radius.xl,
-            border: `1px solid ${colors.borderLight}`,
-            padding: 24,
             display: "flex",
-            flexDirection: "column",
+            alignItems: "stretch",
+            gap: 12,
+            marginBottom: 28,
           }}
+          className="home-nav-bar"
         >
-          <h2
-            style={{
-              fontSize: "clamp(22px, 3vw, 28px)",
-              fontWeight: 800,
-              color: colors.text,
-              fontFamily: fonts.heading,
-              marginBottom: 20,
-              paddingBottom: 12,
-              borderBottom: `2px solid ${colors.primaryLight}`,
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("organizations");
+              setActiveCategory("Всі");
             }}
+            style={tabBtn(activeTab === "organizations")}
           >
             Організації
-          </h2>
+          </button>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, flexGrow: 1 }}>
-            {featuredOrgs.length > 0 ? (
-              featuredOrgs.map((org, i) => (
-                <OrgCard
-                  key={org.organization_id}
-                  org={org}
-                  idx={i}
-                  compact
-                  onNavigate={() => onNavigate("organizations", org)}
-                />
-              ))
-            ) : (
-              <p style={{ color: colors.textMuted, fontSize: 14, textAlign: "center", padding: 24 }}>
-                Організації завантажуються...
-              </p>
-            )}
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "stretch",
+              gap: 10,
+              minWidth: 0,
+            }}
+          >
+            <SearchField
+              value={searchInput}
+              onChange={setSearchInput}
+              placeholder={activeTab === "organizations" ? "Пошук організацій..." : "Пошук подій..."}
+            />
+            <FilterDropdown
+              categories={categories}
+              activeCategory={activeCategory}
+              onChange={setActiveCategory}
+            />
           </div>
 
           <button
             type="button"
-            onClick={() => onNavigate("organizations")}
-            style={{
-              marginTop: 20,
-              width: "100%",
-              padding: "12px 20px",
-              borderRadius: radius.md,
-              fontSize: 15,
-              fontWeight: 700,
-              border: "none",
-              background: colors.primary,
-              color: colors.white,
-              cursor: "pointer",
-              fontFamily: fonts.body,
-              boxShadow: "0 2px 8px rgba(0,82,204,0.25)",
+            onClick={() => {
+              setActiveTab("events");
+              setActiveCategory("Всі");
             }}
+            style={tabBtn(activeTab === "events")}
           >
-            Всі організації →
+            Події
           </button>
         </div>
 
-        <div
-          style={{
-            background: colors.surface,
-            borderRadius: radius.xl,
-            border: `1px solid ${colors.borderLight}`,
-            padding: 24,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <h2
+        {loading ? (
+          <div className="cards-grid">
+            {[...Array(3)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div
             style={{
-              fontSize: "clamp(22px, 3vw, 28px)",
-              fontWeight: 800,
-              color: colors.text,
-              fontFamily: fonts.heading,
-              marginBottom: 20,
-              paddingBottom: 12,
-              borderBottom: `2px solid ${colors.primaryLight}`,
+              textAlign: "center",
+              padding: "64px 20px",
+              color: colors.textMuted,
+              fontFamily: fonts.body,
             }}
           >
-            Події
-          </h2>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, flexGrow: 1 }}>
-            {featuredEvents.length > 0 ? (
-              featuredEvents.map((event, i) => (
-                <EventCard
-                  key={event.event_id}
-                  event={{
-                    ...event,
-                    org_name: event.org_name || event.organization_name,
-                  }}
-                  idx={i}
-                  compact
-                  onNavigate={() => onNavigate("events", event)}
-                />
-              ))
-            ) : (
-              <p style={{ color: colors.textMuted, fontSize: 14, textAlign: "center", padding: 24 }}>
-                Події завантажуються...
-              </p>
-            )}
+            {activeTab === "organizations" ? "Організацій не знайдено" : "Подій не знайдено"}
           </div>
+        ) : (
+          <div className="cards-grid">
+            {activeTab === "organizations"
+              ? organizations.map((org, i) => (
+                  <OrgCard
+                    key={org.organization_id}
+                    org={org}
+                    idx={i}
+                    onNavigate={() => onNavigate("organizations", org)}
+                  />
+                ))
+              : events.map((event, i) => (
+                  <EventCard
+                    key={event.event_id}
+                    event={{ ...event, org_name: event.org_name || event.organization_name }}
+                    idx={i}
+                    onNavigate={() => onNavigate("events", event)}
+                  />
+                ))}
+          </div>
+        )}
 
+        <div style={{ textAlign: "center", marginTop: 28 }}>
           <button
             type="button"
-            onClick={() => onNavigate("events")}
+            onClick={() => onNavigate(activeTab === "organizations" ? "organizations" : "events")}
             style={{
-              marginTop: 20,
-              width: "100%",
-              padding: "12px 20px",
-              borderRadius: radius.md,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              background: "none",
+              border: "none",
+              color: colors.primary,
               fontSize: 15,
               fontWeight: 700,
-              border: "none",
-              background: colors.primary,
-              color: colors.white,
               cursor: "pointer",
               fontFamily: fonts.body,
-              boxShadow: "0 2px 8px rgba(0,82,204,0.25)",
             }}
           >
-            Всі події →
+            {activeTab === "organizations" ? "Всі організації" : "Всі події"}
+            <IconArrowRight size={16} color={colors.primary} />
           </button>
         </div>
       </section>
@@ -280,30 +288,19 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
             animation: "fadeUp 0.6s ease 0.3s both",
           }}
         >
-          <h3
-            style={{
-              fontSize: 24,
-              fontWeight: 800,
-              marginBottom: 10,
-              fontFamily: fonts.heading,
-            }}
-          >
+          <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 10, fontFamily: fonts.heading }}>
             Готовий долучитись?
           </h3>
-          <p
-            style={{
-              fontSize: 15,
-              opacity: 0.9,
-              marginBottom: 24,
-              fontFamily: fonts.body,
-            }}
-          >
+          <p style={{ fontSize: 15, opacity: 0.9, marginBottom: 24, fontFamily: fonts.body }}>
             Зареєструйся і знаходь події та організації за інтересами
           </p>
           <button
             type="button"
             onClick={() => onOpenAuth("register")}
             style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
               padding: "12px 32px",
               borderRadius: radius.md,
               fontSize: 15,
@@ -315,7 +312,8 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
               fontFamily: fonts.body,
             }}
           >
-            Приєднатись безкоштовно →
+            Приєднатись безкоштовно
+            <IconArrowRight size={16} color={colors.primary} />
           </button>
         </section>
       )}
