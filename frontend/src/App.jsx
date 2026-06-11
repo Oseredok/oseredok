@@ -9,6 +9,8 @@ import { OrgDetailPage } from "./pages/OrgDetailPage";
 import { EventsPage } from "./pages/EventsPage";
 import { EventDetailPage } from "./pages/Eventdetailpage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { AdminPage } from "./pages/AdminPage";
+import { CreateEventPage } from "./pages/CreateEventPage";
 
 const API = "http://127.0.0.1:8000";
 
@@ -102,6 +104,7 @@ export default function App() {
             onTabChange={setView}
             user={user}
             onNavigateToEvent={navigateToEvent}
+            onViewChange={setView}
           />
         )}
 
@@ -127,6 +130,14 @@ export default function App() {
             org={selectedOrg}
             onBack={() => setView("organizations")}
           />
+        )}
+
+        {view === "admin" && user?.role === "admin" && (
+          <AdminPage user={user} />
+        )}
+
+        {view === "create-event" && user && (
+          <CreateEventPage user={user} onSuccess={() => setView("events")} />
         )}
       </div>
 

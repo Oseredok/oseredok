@@ -23,6 +23,15 @@ export function Navbar({ user, onLogin, onRegister, onLogout, view, onViewChange
     );
   }
 
+  const navItems = [
+    { label: "Події", key: "events" },
+    { label: "Організації", key: "organizations" },
+  ];
+
+  if (user.role === "admin") {
+    navItems.push({ label: "Адмін-панель", key: "admin" });
+  }
+
   return (
     <div style={{ background: "#fff", borderBottom: "1px solid #e8edf5", position: "sticky", top: 0, zIndex: 50 }}>
       <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: 1200, margin: "0 auto", padding: "14px 24px", gap: 20 }}>
@@ -33,10 +42,7 @@ export function Navbar({ user, onLogin, onRegister, onLogout, view, onViewChange
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            {[
-              { label: "Події", key: "events" },
-              { label: "Організації", key: "organizations" },
-            ].map(item => (
+            {navItems.map(item => (
               <button
                 key={item.key}
                 onClick={() => onViewChange(item.key)}
