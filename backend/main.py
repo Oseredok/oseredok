@@ -13,7 +13,8 @@ from models import Organization, User, Event, Registration
 from schemas import (
     UserRegisterRequest, UserRegisterResponse,
     UserLoginRequest, TokenResponse,
-    UserProfileResponse, RegistrationResponse
+    UserProfileResponse, RegistrationResponse,
+    UserUpdateRequest
 )
 
 app = FastAPI()
@@ -258,6 +259,23 @@ def cancel_registration(
 
 @app.get("/users/me", response_model=UserProfileResponse)
 def get_my_profile(current_user: User = Depends(get_current_user)):
+    return UserProfileResponse(
+        userId=current_user.user_id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        role=current_user.role
+    )
+
+@app.patch("/users/me", response_model=UserProfileResponse)
+def update_my_profile(
+    body: UserUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if body.full_name is not None:
+        current_user.full_name = body.full_name
+    db.commit()
+    db.refresh(current_user)
     return UserProfileResponse(
         userId=current_user.user_id,
         email=current_user.email,

@@ -52,3 +52,7 @@ class RegistrationResponse(BaseModel):
     registration_id: str
     event_id: str
     status: str
+
+
+class UserUpdateRequest(BaseModel):
+    full_name: str | None = None
