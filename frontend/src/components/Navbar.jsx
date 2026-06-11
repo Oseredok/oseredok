@@ -1,72 +1,231 @@
-export function Navbar({ user, onLogin, onRegister, onLogout, view, onViewChange }) {
-  if (!user) {
-    return (
-      <div style={{
-        background: "rgba(238,242,251,0.9)", backdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(226,232,240,0.5)",
-        position: "sticky", top: 0, zIndex: 50,
-      }}>
-        <nav style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          maxWidth: 1200, margin: "0 auto", padding: "14px 24px", gap: 12,
-        }}>
-          <button onClick={() => onViewChange("home")} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg, #2563eb, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff" }}>✦</div>
-            <span style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", fontFamily: "'Playfair Display', serif" }}>Осередок</span>
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={onLogin} style={{ padding: "8px 20px", borderRadius: 99, fontSize: 13, fontWeight: 600, border: "1.5px solid #e2e8f0", background: "#fff", color: "#334155", cursor: "pointer" }}>Увійти</button>
-            <button onClick={onRegister} style={{ padding: "8px 20px", borderRadius: 99, fontSize: 13, fontWeight: 700, border: "none", background: "linear-gradient(135deg, #2563eb, #3b82f6)", color: "#fff", cursor: "pointer", boxShadow: "0 4px 12px rgba(37,99,235,0.3)" }}>Реєстрація</button>
-          </div>
-        </nav>
-      </div>
-    );
-  }
+import { colors, fonts, layout, radius, shadows } from "../theme/tokens";
+
+const NAV_LINKS = [
+  { id: "home", label: "Головна" },
+  { id: "organizations", label: "Організації" },
+  { id: "events", label: "Події" },
+];
+
+export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout }) {
+  const isActive = (id) => {
+    if (id === "home") return view === "home";
+    if (id === "organizations") return view === "organizations" || view === "org-detail";
+    if (id === "events") return view === "events" || view === "event-detail";
+    return false;
+  };
 
   return (
-    <div style={{ background: "#fff", borderBottom: "1px solid #e8edf5", position: "sticky", top: 0, zIndex: 50 }}>
-      <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: 1200, margin: "0 auto", padding: "14px 24px", gap: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-          <button onClick={() => onViewChange("home")} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg, #2563eb, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff" }}>✦</div>
-            <span style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", fontFamily: "'Playfair Display', serif" }}>Осередок</span>
-          </button>
+    <header
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        background: "rgba(255,255,255,0.92)",
+        backdropFilter: "blur(12px)",
+        borderBottom: `1px solid ${colors.borderLight}`,
+        boxShadow: shadows.sm,
+      }}
+    >
+      <nav
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          maxWidth: layout.maxWidth,
+          margin: "0 auto",
+          padding: "0 24px",
+          height: layout.navHeight,
+          gap: 16,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => onNavigate("home")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: radius.sm,
+              background: colors.primary,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: colors.white,
+              fontSize: 18,
+              fontWeight: 800,
+            }}
+          >
+            О
+          </div>
+          <span
+            style={{
+              fontSize: 20,
+              fontWeight: 800,
+              color: colors.text,
+              fontFamily: fonts.heading,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Осередок
+          </span>
+        </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            {[
-              { label: "Події", key: "events" },
-              { label: "Організації", key: "organizations" },
-            ].map(item => (
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {NAV_LINKS.map(({ id, label }) => {
+            const active = isActive(id);
+            return (
               <button
-                key={item.key}
-                onClick={() => onViewChange(item.key)}
+                key={id}
+                type="button"
+                onClick={() => onNavigate(id)}
                 style={{
-                  padding: "7px 14px", borderRadius: 8, fontSize: 14, fontWeight: 600,
-                  background: "none", border: "none", cursor: "pointer",
-                  color: view === item.key ? "#2563eb" : "#64748b",
-                  borderBottom: view === item.key ? "2px solid #2563eb" : "2px solid transparent",
+                  padding: "8px 16px",
+                  borderRadius: radius.pill,
+                  fontSize: 14,
+                  fontWeight: active ? 700 : 500,
+                  border: "none",
+                  background: active ? colors.primaryLight : "transparent",
+                  color: active ? colors.primary : colors.textSecondary,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  fontFamily: fonts.body,
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {user ? (
+            <>
+              <button
+                type="button"
+                onClick={() => onNavigate("profile")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 14px 6px 6px",
+                  background: view === "profile" ? colors.primaryLight : colors.surface,
+                  borderRadius: radius.pill,
+                  border: `1px solid ${view === "profile" ? colors.primaryMuted : colors.border}`,
+                  cursor: "pointer",
                   transition: "all 0.15s",
                 }}
-                onMouseEnter={e => { if (view !== item.key) e.currentTarget.style.color = "#0f172a"; }}
-                onMouseLeave={e => { if (view !== item.key) e.currentTarget.style.color = "#64748b"; }}
               >
-                {item.label}
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: colors.primary,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 12,
+                    color: colors.white,
+                    fontWeight: 700,
+                  }}
+                >
+                  {user.email[0].toUpperCase()}
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: colors.text }}>
+                  Профіль
+                </span>
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>{user.email}</span>
-          <button
-            onClick={() => onViewChange("profile")}  
-            style={{ padding: "8px 20px", borderRadius: 99, fontSize: 13, fontWeight: 700, border: "none", background: "linear-gradient(135deg, #2563eb, #3b82f6)", color: "#fff", cursor: "pointer", boxShadow: "0 4px 12px rgba(37,99,235,0.3)" }}
-          >
-            Мій профіль
-          </button>
-          <button onClick={onLogout} style={{ padding: "8px 16px", borderRadius: 99, fontSize: 13, fontWeight: 600, border: "1.5px solid #e2e8f0", background: "#fff", color: "#64748b", cursor: "pointer" }}>Вийти</button>
+              <button
+                type="button"
+                onClick={onLogout}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: radius.pill,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: `1px solid ${colors.border}`,
+                  background: colors.surface,
+                  color: colors.textSecondary,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = colors.primary;
+                  e.currentTarget.style.color = colors.primary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = colors.border;
+                  e.currentTarget.style.color = colors.textSecondary;
+                }}
+              >
+                Вийти
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onOpenAuth("login")}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: radius.pill,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  border: `1px solid ${colors.border}`,
+                  background: colors.surface,
+                  color: colors.text,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = colors.primary;
+                  e.currentTarget.style.color = colors.primary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = colors.border;
+                  e.currentTarget.style.color = colors.text;
+                }}
+              >
+                Увійти
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenAuth("register")}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: radius.pill,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  border: "none",
+                  background: colors.primary,
+                  color: colors.white,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  boxShadow: "0 2px 8px rgba(0,82,204,0.25)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.primaryHover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.primary;
+                }}
+              >
+                Реєстрація
+              </button>
+            </>
+          )}
         </div>
       </nav>
-    </div>
+    </header>
   );
 }
