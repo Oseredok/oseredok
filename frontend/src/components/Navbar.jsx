@@ -1,16 +1,22 @@
 import { colors, fonts, layout, radius, shadows } from "../theme/tokens";
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { id: "home", label: "Головна" },
   { id: "organizations", label: "Організації" },
   { id: "events", label: "Події" },
 ];
 
 export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout }) {
+  const navLinks = [...BASE_NAV_LINKS];
+  if (user?.role === "admin") {
+    navLinks.push({ id: "admin", label: "Адмін-панель" });
+  }
+
   const isActive = (id) => {
     if (id === "home") return view === "home";
     if (id === "organizations") return view === "organizations" || view === "org-detail";
-    if (id === "events") return view === "events" || view === "event-detail";
+    if (id === "events") return view === "events" || view === "event-detail" || view === "create-event";
+    if (id === "admin") return view === "admin";
     return false;
   };
 
@@ -80,8 +86,8 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
           </span>
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {NAV_LINKS.map(({ id, label }) => {
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+          {navLinks.map(({ id, label }) => {
             const active = isActive(id);
             return (
               <button

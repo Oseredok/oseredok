@@ -77,7 +77,7 @@ export default function EventCard({ event, idx, onNavigate, compact = false }) {
               fontFamily: fonts.body,
             }}
           >
-            {event.org_name}
+            {event.org_name || event.organization_name}
           </p>
         )}
 
