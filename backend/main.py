@@ -14,7 +14,8 @@ from schemas import (
     UserRegisterRequest, UserRegisterResponse,
     UserLoginRequest, TokenResponse,
     UserProfileResponse, RegistrationResponse,
-    UserUpdateRequest
+    UserUpdateRequest, OrganizationCreateRequest,
+    EventCreateRequest
 )
 
 app = FastAPI()
@@ -116,6 +117,45 @@ def get_organization(org_id: str, db: Session = Depends(get_db)):
     }
 
 
+@app.post("/organizations", status_code=201)
+def create_organization(
+    body: OrganizationCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Тільки адміністратор може створювати організації")
+    
+    existing_handle = db.query(Organization).filter(Organization.handle == body.handle).first()
+    if existing_handle:
+        raise HTTPException(status_code=409, detail="Такий handle вже зайнято")
+    
+    new_org = Organization(
+        organization_id=str(uuid.uuid4()),
+        name=body.name,
+        handle=body.handle,
+        description=body.description,
+        category=body.category,
+        faculty=body.faculty,
+        logo_url=body.logo_url,
+        contact_email=body.contact_email,
+        phone=body.phone,
+        instagram=body.instagram,
+        telegram=body.telegram,
+        website=body.website,
+        status="active",
+        created_at=datetime.utcnow()
+    )
+    db.add(new_org)
+    db.commit()
+    db.refresh(new_org)
+    return {
+        "organization_id": new_org.organization_id,
+        "name": new_org.name,
+        "message": "Організацію створено"
+    }
+
+
 # --- Events ---
 
 @app.get("/events")
@@ -188,6 +228,38 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
         "organization_id": event.organization_id,
         "organization_name": org.name if org else None,
         "organization_logo": org.logo_url if org else None,
+    }
+
+
+@app.post("/events", status_code=201)
+def create_event(
+    body: EventCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    org = db.query(Organization).filter(Organization.organization_id == body.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Організацію не знайдено")
+    
+    new_event = Event(
+        event_id=str(uuid.uuid4()),
+        organization_id=body.organization_id,
+        title=body.title,
+        description=body.description,
+        location=body.location,
+        start_datetime=body.start_datetime,
+        end_datetime=body.end_datetime,
+        max_participants=body.max_participants,
+        status="active",
+        created_at=datetime.utcnow()
+    )
+    db.add(new_event)
+    db.commit()
+    db.refresh(new_event)
+    return {
+        "event_id": new_event.event_id,
+        "title": new_event.title,
+        "message": "Подію створено"
     }
 
 
