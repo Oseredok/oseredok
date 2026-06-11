@@ -1,19 +1,15 @@
 import { colors, fonts, layout, radius, shadows } from "../theme/tokens";
 
-const BASE_NAV_LINKS = [
-  { id: "home", label: "Головна" },
-  { id: "organizations", label: "Організації" },
-  { id: "events", label: "Події" },
-];
-
 export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout }) {
-  const navLinks = [...BASE_NAV_LINKS];
+  const loggedInNav = [
+    { id: "organizations", label: "Організації" },
+    { id: "events", label: "Події" },
+  ];
   if (user?.role === "admin") {
-    navLinks.push({ id: "admin", label: "Адмін-панель" });
+    loggedInNav.push({ id: "admin", label: "Адмін-панель" });
   }
 
   const isActive = (id) => {
-    if (id === "home") return view === "home";
     if (id === "organizations") return view === "organizations" || view === "org-detail";
     if (id === "events") return view === "events" || view === "event-detail" || view === "create-event";
     if (id === "admin") return view === "admin";
@@ -44,73 +40,77 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
           gap: 16,
         }}
       >
-        <button
-          type="button"
-          onClick={() => onNavigate("home")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-          }}
-        >
-          <div
+        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+          <button
+            type="button"
+            onClick={() => onNavigate("home")}
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: radius.sm,
-              background: colors.primary,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              color: colors.white,
-              fontSize: 18,
-              fontWeight: 800,
+              gap: 10,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
             }}
           >
-            О
-          </div>
-          <span
-            style={{
-              fontSize: 20,
-              fontWeight: 800,
-              color: colors.text,
-              fontFamily: fonts.heading,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Осередок
-          </span>
-        </button>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: radius.sm,
+                background: colors.primary,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: colors.white,
+                fontSize: 18,
+                fontWeight: 800,
+              }}
+            >
+              О
+            </div>
+            <span
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                color: colors.text,
+                fontFamily: fonts.heading,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Осередок
+            </span>
+          </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-          {navLinks.map(({ id, label }) => {
-            const active = isActive(id);
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onNavigate(id)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: radius.pill,
-                  fontSize: 14,
-                  fontWeight: active ? 700 : 500,
-                  border: "none",
-                  background: active ? colors.primaryLight : "transparent",
-                  color: active ? colors.primary : colors.textSecondary,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  fontFamily: fonts.body,
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
+          {user && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              {loggedInNav.map(({ id, label }) => {
+                const active = isActive(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onNavigate(id)}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: radius.sm,
+                      fontSize: 14,
+                      fontWeight: active ? 700 : 500,
+                      border: "none",
+                      background: "transparent",
+                      color: active ? colors.primary : colors.textSecondary,
+                      cursor: "pointer",
+                      borderBottom: active ? `2px solid ${colors.primary}` : "2px solid transparent",
+                      fontFamily: fonts.body,
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -120,36 +120,18 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
                 type="button"
                 onClick={() => onNavigate("profile")}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 14px 6px 6px",
-                  background: view === "profile" ? colors.primaryLight : colors.surface,
+                  padding: "8px 18px",
                   borderRadius: radius.pill,
-                  border: `1px solid ${view === "profile" ? colors.primaryMuted : colors.border}`,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: "none",
+                  background: colors.primary,
+                  color: colors.white,
                   cursor: "pointer",
-                  transition: "all 0.15s",
+                  fontFamily: fonts.body,
                 }}
               >
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    background: colors.primary,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 12,
-                    color: colors.white,
-                    fontWeight: 700,
-                  }}
-                >
-                  {user.email[0].toUpperCase()}
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: colors.text }}>
-                  Профіль
-                </span>
+                Мій профіль
               </button>
               <button
                 type="button"
@@ -163,15 +145,7 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
                   background: colors.surface,
                   color: colors.textSecondary,
                   cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = colors.primary;
-                  e.currentTarget.style.color = colors.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                  e.currentTarget.style.color = colors.textSecondary;
+                  fontFamily: fonts.body,
                 }}
               >
                 Вийти
@@ -191,15 +165,7 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
                   background: colors.surface,
                   color: colors.text,
                   cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = colors.primary;
-                  e.currentTarget.style.color = colors.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                  e.currentTarget.style.color = colors.text;
+                  fontFamily: fonts.body,
                 }}
               >
                 Увійти
@@ -216,14 +182,7 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
                   background: colors.primary,
                   color: colors.white,
                   cursor: "pointer",
-                  transition: "all 0.15s",
-                  boxShadow: "0 2px 8px rgba(0,82,204,0.25)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.primaryHover;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.primary;
+                  fontFamily: fonts.body,
                 }}
               >
                 Реєстрація

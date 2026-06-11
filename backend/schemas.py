@@ -72,6 +72,21 @@ class OrganizationCreateRequest(BaseModel):
     website: str | None = None
 
 
+class OrganizationUpdateRequest(BaseModel):
+    name: str | None = None
+    handle: str | None = None
+    description: str | None = None
+    category: str | None = None
+    faculty: str | None = None
+    logo_url: str | None = None
+    contact_email: str | None = None
+    phone: str | None = None
+    instagram: str | None = None
+    telegram: str | None = None
+    website: str | None = None
+    status: str | None = None
+
+
 class EventCreateRequest(BaseModel):
     organization_id: str
     title: str

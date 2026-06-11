@@ -2,30 +2,32 @@ import { useEffect, useState } from "react";
 import { API } from "../api";
 import OrgCard from "../components/cards/OrgCard";
 import EventCard from "../components/cards/EventCard";
-import { mockEvents } from "../data/mockEvents";
 import { useCount } from "../hooks/useCount";
-import { colors, fonts, radius, shadows } from "../theme/tokens";
+import { colors, fonts, radius } from "../theme/tokens";
 
 export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
   const [featuredOrgs, setFeaturedOrgs] = useState([]);
+  const [featuredEvents, setFeaturedEvents] = useState([]);
   const animatedCount = useCount(orgCount);
 
   useEffect(() => {
     fetch(`${API}/organizations`)
       .then((r) => r.json())
-      .then((data) => setFeaturedOrgs(data.slice(0, 3)))
+      .then((data) => setFeaturedOrgs(data.slice(0, 4)))
+      .catch(() => {});
+    fetch(`${API}/events`)
+      .then((r) => r.json())
+      .then((data) => setFeaturedEvents(data.slice(0, 4)))
       .catch(() => {});
   }, []);
-
-  const featuredEvents = mockEvents.slice(0, 3);
 
   return (
     <div>
       <section
         style={{
           textAlign: "center",
-          marginBottom: 56,
-          padding: "48px 0 0",
+          marginBottom: 48,
+          padding: "32px 0 0",
           animation: "fadeUp 0.6s ease both",
         }}
       >
@@ -49,19 +51,27 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
 
         <h1
           style={{
-            fontSize: "clamp(32px, 5vw, 52px)",
+            fontSize: "clamp(36px, 6vw, 56px)",
             fontWeight: 800,
-            lineHeight: 1.15,
+            lineHeight: 1.12,
             fontFamily: fonts.heading,
             color: colors.text,
             letterSpacing: "-0.03em",
-            marginBottom: 16,
-            maxWidth: 640,
             margin: "0 auto 16px",
+            maxWidth: 720,
           }}
         >
-          Запрошуємо до{" "}
-          <span style={{ color: colors.primary }}>спільноти</span>
+          Знайди своє
+          <br />
+          <span
+            style={{
+              background: `linear-gradient(135deg, ${colors.primary}, #4C9AFF)`,
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            місце в університеті
+          </span>
         </h1>
 
         <p
@@ -81,70 +91,9 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
           style={{
             display: "flex",
             justifyContent: "center",
-            gap: 12,
-            flexWrap: "wrap",
-            marginBottom: 40,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => onNavigate("events")}
-            style={{
-              padding: "12px 28px",
-              borderRadius: radius.md,
-              fontSize: 15,
-              fontWeight: 700,
-              border: "none",
-              background: colors.primary,
-              color: colors.white,
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(0,82,204,0.25)",
-              transition: "background 0.15s",
-              fontFamily: fonts.body,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = colors.primaryHover;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = colors.primary;
-            }}
-          >
-            Переглянути події
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate("organizations")}
-            style={{
-              padding: "12px 28px",
-              borderRadius: radius.md,
-              fontSize: 15,
-              fontWeight: 700,
-              border: `1.5px solid ${colors.border}`,
-              background: colors.surface,
-              color: colors.text,
-              cursor: "pointer",
-              transition: "all 0.15s",
-              fontFamily: fonts.body,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = colors.primary;
-              e.currentTarget.style.color = colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = colors.border;
-              e.currentTarget.style.color = colors.text;
-            }}
-          >
-            Організації
-          </button>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
             gap: 40,
             flexWrap: "wrap",
+            marginBottom: 8,
           }}
         >
           {[
@@ -178,99 +127,144 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
         </div>
       </section>
 
-      <section style={{ marginBottom: 48, animation: "fadeUp 0.6s ease 0.1s both" }}>
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 32,
+          animation: "fadeUp 0.6s ease 0.15s both",
+        }}
+        className="home-split"
+      >
         <div
           style={{
+            background: colors.surface,
+            borderRadius: radius.xl,
+            border: `1px solid ${colors.borderLight}`,
+            padding: 24,
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
+            flexDirection: "column",
           }}
         >
           <h2
             style={{
-              fontSize: 24,
+              fontSize: "clamp(22px, 3vw, 28px)",
               fontWeight: 800,
               color: colors.text,
               fontFamily: fonts.heading,
+              marginBottom: 20,
+              paddingBottom: 12,
+              borderBottom: `2px solid ${colors.primaryLight}`,
             }}
           >
             Організації
           </h2>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, flexGrow: 1 }}>
+            {featuredOrgs.length > 0 ? (
+              featuredOrgs.map((org, i) => (
+                <OrgCard
+                  key={org.organization_id}
+                  org={org}
+                  idx={i}
+                  compact
+                  onNavigate={() => onNavigate("organizations", org)}
+                />
+              ))
+            ) : (
+              <p style={{ color: colors.textMuted, fontSize: 14, textAlign: "center", padding: 24 }}>
+                Організації завантажуються...
+              </p>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={() => onNavigate("organizations")}
             style={{
-              background: "none",
+              marginTop: 20,
+              width: "100%",
+              padding: "12px 20px",
+              borderRadius: radius.md,
+              fontSize: 15,
+              fontWeight: 700,
               border: "none",
-              color: colors.primary,
-              fontSize: 14,
-              fontWeight: 600,
+              background: colors.primary,
+              color: colors.white,
               cursor: "pointer",
               fontFamily: fonts.body,
+              boxShadow: "0 2px 8px rgba(0,82,204,0.25)",
             }}
           >
-            Дивитись всі →
+            Всі організації →
           </button>
         </div>
-        <div className="cards-grid">
-          {featuredOrgs.map((org, i) => (
-            <OrgCard
-              key={org.organization_id}
-              org={org}
-              idx={i}
-              compact
-              onNavigate={() => onNavigate("organizations", org)}
-            />
-          ))}
-        </div>
-      </section>
 
-      <section style={{ marginBottom: 48, animation: "fadeUp 0.6s ease 0.2s both" }}>
         <div
           style={{
+            background: colors.surface,
+            borderRadius: radius.xl,
+            border: `1px solid ${colors.borderLight}`,
+            padding: 24,
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
+            flexDirection: "column",
           }}
         >
           <h2
             style={{
-              fontSize: 24,
+              fontSize: "clamp(22px, 3vw, 28px)",
               fontWeight: 800,
               color: colors.text,
               fontFamily: fonts.heading,
+              marginBottom: 20,
+              paddingBottom: 12,
+              borderBottom: `2px solid ${colors.primaryLight}`,
             }}
           >
             Події
           </h2>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, flexGrow: 1 }}>
+            {featuredEvents.length > 0 ? (
+              featuredEvents.map((event, i) => (
+                <EventCard
+                  key={event.event_id}
+                  event={{
+                    ...event,
+                    org_name: event.org_name || event.organization_name,
+                  }}
+                  idx={i}
+                  compact
+                  onNavigate={() => onNavigate("events", event)}
+                />
+              ))
+            ) : (
+              <p style={{ color: colors.textMuted, fontSize: 14, textAlign: "center", padding: 24 }}>
+                Події завантажуються...
+              </p>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={() => onNavigate("events")}
             style={{
-              background: "none",
+              marginTop: 20,
+              width: "100%",
+              padding: "12px 20px",
+              borderRadius: radius.md,
+              fontSize: 15,
+              fontWeight: 700,
               border: "none",
-              color: colors.primary,
-              fontSize: 14,
-              fontWeight: 600,
+              background: colors.primary,
+              color: colors.white,
               cursor: "pointer",
               fontFamily: fonts.body,
+              boxShadow: "0 2px 8px rgba(0,82,204,0.25)",
             }}
           >
-            Дивитись всі →
+            Всі події →
           </button>
-        </div>
-        <div className="cards-grid">
-          {featuredEvents.map((event, i) => (
-            <EventCard
-              key={event.event_id}
-              event={event}
-              idx={i}
-              compact
-              onNavigate={() => onNavigate("events", event)}
-            />
-          ))}
         </div>
       </section>
 
@@ -282,6 +276,7 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
             background: colors.primary,
             borderRadius: radius.xl,
             color: colors.white,
+            marginTop: 48,
             animation: "fadeUp 0.6s ease 0.3s both",
           }}
         >
@@ -313,20 +308,11 @@ export default function HomePage({ user, orgCount, onNavigate, onOpenAuth }) {
               borderRadius: radius.md,
               fontSize: 15,
               fontWeight: 700,
-              border: `2px solid rgba(255,255,255,0.5)`,
+              border: "2px solid rgba(255,255,255,0.5)",
               background: colors.white,
               color: colors.primary,
               cursor: "pointer",
-              transition: "all 0.18s",
               fontFamily: fonts.body,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = colors.white;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = colors.white;
-              e.currentTarget.style.color = colors.primary;
             }}
           >
             Приєднатись безкоштовно →

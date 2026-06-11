@@ -49,10 +49,12 @@ body {
 @media (max-width: 900px) {
   .cards-grid { grid-template-columns: repeat(2, 1fr); }
   .detail-grid { grid-template-columns: 1fr; }
+  .home-split { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 600px) {
   .cards-grid { grid-template-columns: 1fr; }
+  .admin-stats { grid-template-columns: 1fr !important; }
 }
 
 ::-webkit-scrollbar { width: 6px; }
