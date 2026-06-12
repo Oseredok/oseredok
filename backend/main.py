@@ -183,6 +183,9 @@ def delete_organization(
     if not org:
         raise HTTPException(status_code=404, detail="Організацію не знайдено")
 
+    db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == org_id
+    ).delete()
     db.delete(org)
     db.commit()
     return {"message": "Організацію видалено"}
