@@ -37,6 +37,11 @@ def org_to_dict(org: Organization) -> dict:
         "status": org.status or "active",
     }
 
+
+from database import Base, engine
+import models
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI()
 
 app.add_middleware(
