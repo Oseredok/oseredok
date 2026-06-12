@@ -38,9 +38,28 @@ def org_to_dict(org: Organization) -> dict:
     }
 
 
-from database import Base, engine
+from database import Base, engine, SessionLocal
 import models
 Base.metadata.create_all(bind=engine)
+
+# Run migrations
+import os
+from sqlalchemy import text
+migrations_dir = os.path.join(os.path.dirname(__file__), "..", "db", "migrations")
+if os.path.exists(migrations_dir):
+    db = SessionLocal()
+    for fname in sorted(os.listdir(migrations_dir)):
+        if fname.endswith(".sql"):
+            with open(os.path.join(migrations_dir, fname)) as f:
+                for statement in f.read().split(";"):
+                    stmt = statement.strip()
+                    if stmt:
+                        try:
+                            db.execute(text(stmt))
+                        except Exception:
+                            pass
+    db.commit()
+    db.close()
 
 app = FastAPI()
 
