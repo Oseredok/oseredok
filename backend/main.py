@@ -166,7 +166,6 @@ def update_organization(
         setattr(org, field, value)
 
     db.commit()
-    db.refresh(org)
     return org_to_dict(org)
 
 
