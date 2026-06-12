@@ -235,7 +235,6 @@ def create_organization(
         ))
 
     db.commit()
-    db.refresh(new_org)
     return {
         "organization_id": new_org.organization_id,
         "name": new_org.name,
