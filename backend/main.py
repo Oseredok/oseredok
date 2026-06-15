@@ -567,3 +567,175 @@ def login(body: UserLoginRequest, db: Session = Depends(get_db)):
 
     token = create_token(user.user_id, user.email)
     return TokenResponse(token=token, userId=user.user_id, email=user.email)
+
+
+# Отримати всіх користувачів
+@app.get("/users")
+def get_all_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+    
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    return [
+        {
+            "user_id": u.user_id,
+            "full_name": u.full_name,
+            "email": u.email,
+            "role": u.role,
+            "faculty": u.faculty,
+            "created_at": u.created_at,
+        }
+        for u in users
+    ]
+
+
+# Змінити роль користувача
+@app.patch("/users/{user_id}/role")
+def update_user_role(
+    user_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+    
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
+    
+    user.role = body["role"]
+    db.commit()
+    return {"message": "Роль оновлено"}
+
+# Отримати організації користувача
+@app.get("/users/{user_id}/organizations")
+def get_user_organizations(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+
+    memberships = (
+        db.query(OrganizationMember, Organization)
+        .join(Organization, OrganizationMember.organization_id == Organization.organization_id)
+        .filter(OrganizationMember.user_id == user_id)
+        .all()
+    )
+    return [
+        {
+            "organization_id": org.organization_id,
+            "name": org.name,
+            "handle": org.handle,
+            "logo_url": org.logo_url,
+            "role_in_org": member.role_in_org,
+        }
+        for member, org in memberships
+    ]
+
+# Додати користувача до організації
+@app.post("/users/{user_id}/organizations")
+def add_user_to_org(
+    user_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+
+    existing = db.query(OrganizationMember).filter(
+        OrganizationMember.user_id == user_id,
+        OrganizationMember.organization_id == body["organization_id"]
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Вже є членом організації")
+
+    db.add(OrganizationMember(
+        membership_id=str(uuid.uuid4()),
+        user_id=user_id,
+        organization_id=body["organization_id"],
+        role_in_org=body.get("role_in_org", "organizer"),
+        joined_at=datetime.utcnow(),
+    ))
+    db.commit()
+    return {"message": "Додано до організації"}
+
+
+# Видалити користувача з організації
+@app.delete("/users/{user_id}/organizations/{org_id}")
+def remove_user_from_org(
+    user_id: str,
+    org_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+
+    membership = db.query(OrganizationMember).filter(
+        OrganizationMember.user_id == user_id,
+        OrganizationMember.organization_id == org_id
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Членство не знайдено")
+
+    db.delete(membership)
+    db.commit()
+    return {"message": "Видалено з організації"}
+
+
+# Видалити користувача
+@app.delete("/users/{user_id}")
+def delete_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+    if user_id == current_user.user_id:
+        raise HTTPException(status_code=400, detail="Не можна видалити себе")
+
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
+
+    db.query(Registration).filter(Registration.user_id == user_id).delete()
+    db.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).delete()
+    db.delete(user)
+    db.commit()
+    return {"message": "Користувача видалено"}
+
+
+# Створити користувача (адмін)
+@app.post("/users", status_code=201)
+def create_user(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+
+    existing = db.query(User).filter(User.email == body["email"]).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Email вже зареєстровано")
+
+    new_user = User(
+        user_id=str(uuid.uuid4()),
+        email=body["email"],
+        full_name=body.get("full_name"),
+        password_hash=hash_password(body["password"]),
+        role=body.get("role", "student"),
+        faculty=body.get("faculty"),
+        created_at=datetime.utcnow()
+    )
+    db.add(new_user)
+    db.commit()
+    return {"user_id": new_user.user_id, "message": "Користувача створено"}
