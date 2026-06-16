@@ -1,10 +1,9 @@
-import { useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { API } from "../api";
 import {
   IconPlus,
   IconRefresh,
   IconTrash,
-  IconEdit,
 } from "../components/admin/AdminIcons";
 import { colors, fonts, radius, shadows } from "../theme/tokens";
 
@@ -23,11 +22,6 @@ const roleColors = {
   org_owner: { bg: "#FFF7ED", color: "#EA580C" },
   admin: { bg: "#FEF2F2", color: "#DC2626" },
 };
-
-const TABS = [
-  { id: "orgs", label: "Організації" },
-  { id: "users", label: "Користувачі" },
-];
 
 function RoleBadge({ role }) {
   const c = roleColors[role] || { bg: "#F1F5F9", color: "#64748B" };
@@ -219,198 +213,27 @@ function CreateUserModal({ onClose, onSuccess, token }) {
   );
 }
 
-// ── Edit user modal ────────────────────────────────────────────
-function EditUserModal({ user, orgs, onClose, onSuccess, token }) {
-  const [role, setRole] = useState(user.role);
-  const [selectedOrg, setSelectedOrg] = useState("");
-  const [roleInOrg, setRoleInOrg] = useState("organizer");
-  const [memberships, setMemberships] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const btnPrimary = {
-    display: "inline-flex", alignItems: "center", gap: 6,
-    padding: "10px 20px", borderRadius: radius.md, fontSize: 14, fontWeight: 700,
-    background: colors.primary, color: colors.white, border: "none", cursor: "pointer", fontFamily: fonts.body,
-  };
-  const btnSecondary = {
-    display: "inline-flex", alignItems: "center", gap: 6,
-    padding: "10px 20px", borderRadius: radius.md, fontSize: 14, fontWeight: 600,
-    background: colors.surface, color: colors.textSecondary,
-    border: `1px solid ${colors.border}`, cursor: "pointer", fontFamily: fonts.body,
-  };
-
-  useEffect(() => {
-    fetch(`${API}/users/${user.user_id}/organizations`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.ok ? r.json() : [])
-      .then(setMemberships)
-      .catch(() => {});
-  }, [user.user_id]);
-
-  const saveRole = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`${API}/users/${user.user_id}/role`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ role }),
-      });
-      if (!res.ok) throw new Error("Помилка збереження");
-      onSuccess();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addToOrg = async () => {
-    if (!selectedOrg) return;
-    try {
-      const res = await fetch(`${API}/users/${user.user_id}/organizations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ organization_id: selectedOrg, role_in_org: roleInOrg }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || "Помилка");
-      }
-      const newOrg = orgs.find((o) => o.organization_id === selectedOrg);
-      if (newOrg) setMemberships((prev) => [...prev, { ...newOrg, role_in_org: roleInOrg }]);
-      setSelectedOrg("");
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  const removeFromOrg = async (orgId) => {
-    try {
-      await fetch(`${API}/users/${user.user_id}/organizations/${orgId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMemberships((prev) => prev.filter((m) => m.organization_id !== orgId));
-    } catch {
-      setError("Помилка видалення");
-    }
-  };
-
-  const availableOrgs = orgs.filter(
-    (o) => !memberships.some((m) => m.organization_id === o.organization_id)
-  );
-
-  return (
-    <Modal title={`Редагувати · ${user.full_name || user.email}`} onClose={onClose}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div>
-          <label style={labelStyle}>Роль</label>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <select style={{ ...inputStyle, flex: 1 }} value={role} onChange={(e) => setRole(e.target.value)}>
-              {ROLES.map((r) => <option key={r} value={r}>{roleLabels[r]}</option>)}
-            </select>
-            <button style={{ ...btnPrimary, padding: "10px 16px", whiteSpace: "nowrap" }}
-              onClick={saveRole} disabled={loading}>
-              {loading ? "..." : "Зберегти"}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label style={labelStyle}>Організації</label>
-          {memberships.length === 0 ? (
-            <p style={{ fontSize: 13, color: colors.textMuted, fontFamily: fonts.body, margin: "4px 0 8px" }}>
-              Не є членом жодної організації
-            </p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
-              {memberships.map((m) => (
-                <div key={m.organization_id} style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "8px 12px", borderRadius: radius.md,
-                  background: colors.bg, border: `1px solid ${colors.borderLight}`,
-                }}>
-                  <div>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: colors.text, fontFamily: fonts.body }}>
-                      {m.name}
-                    </span>
-                    <span style={{ fontSize: 12, color: colors.textMuted, marginLeft: 8, fontFamily: fonts.body }}>
-                      {m.role_in_org}
-                    </span>
-                  </div>
-                  <button onClick={() => removeFromOrg(m.organization_id)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: colors.error, padding: 4 }}>
-                    <IconClose />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          {availableOrgs.length > 0 && (
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <select style={{ ...inputStyle, flex: 1 }} value={selectedOrg}
-                onChange={(e) => setSelectedOrg(e.target.value)}>
-                <option value="">Оберіть організацію...</option>
-                {availableOrgs.map((o) => (
-                  <option key={o.organization_id} value={o.organization_id}>{o.name}</option>
-                ))}
-              </select>
-              <select style={{ ...inputStyle, width: 130 }} value={roleInOrg}
-                onChange={(e) => setRoleInOrg(e.target.value)}>
-                <option value="organizer">Організатор</option>
-                <option value="owner">Власник</option>
-              </select>
-              <button
-                style={{ ...btnPrimary, padding: "10px 12px" }}
-                onClick={addToOrg}
-              >
-                <IconPlus size={15} color={colors.white} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {error && <p style={{ color: colors.error, fontSize: 13, fontFamily: fonts.body, margin: 0 }}>{error}</p>}
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button style={btnSecondary} onClick={onClose}>Закрити</button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
 // ── Main page ──────────────────────────────────────────────────
 
 export default function AdminUsersPage({ user, onRef }) {
   const [users, setUsers] = useState([]);
-  const [orgs, setOrgs] = useState([]);
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [editUser, setEditUser] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const token = localStorage.getItem("token");
 
   const load = () => {
     setLoading(true);
-    Promise.all([
-      fetch(`${API}/users`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch(`${API}/organizations`).then((r) => r.json()),
-    ])
-      .then(([u, o]) => {
-        setUsers(Array.isArray(u) ? u : []);
-        setOrgs(Array.isArray(o) ? o : []);
-      })
+    fetch(`${API}/users`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((u) => setUsers(Array.isArray(u) ? u : []))
       .catch(() => {})
       .finally(() => setLoading(false));
   };
 
-  // Expose load() і openCreate() до батьківського AdminPage
   useEffect(() => {
     onRef?.({ load, openCreate: () => setShowCreate(true) });
   }, []);
@@ -572,24 +395,14 @@ export default function AdminUsersPage({ user, onRef }) {
                     <td style={{ padding: "14px 16px", color: colors.textSecondary }}>{u.faculty || "—"}</td>
                     <td style={{ padding: "14px 16px" }}><RoleBadge role={u.role} /></td>
                     <td style={{ padding: "14px 16px" }}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button
-                          type="button"
-                          style={iconActionBtn(colors.primary, colors.primaryLight)}
-                          onClick={() => setEditUser(u)}
-                          title="Редагувати"
-                        >
-                          <IconEdit size={16} color={colors.primary} />
-                        </button>
-                        <button
-                          type="button"
-                          style={iconActionBtn(colors.error, colors.errorBg)}
-                          onClick={() => setConfirmDelete(u)}
-                          title="Видалити"
-                        >
-                          <IconTrash size={16} color={colors.error} />
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        style={iconActionBtn(colors.error, colors.errorBg)}
+                        onClick={() => setConfirmDelete(u)}
+                        title="Видалити"
+                      >
+                        <IconTrash size={16} color={colors.error} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -603,11 +416,6 @@ export default function AdminUsersPage({ user, onRef }) {
       {showCreate && (
         <CreateUserModal token={token} onClose={() => setShowCreate(false)}
           onSuccess={() => { setShowCreate(false); load(); }} />
-      )}
-      {editUser && (
-        <EditUserModal user={editUser} orgs={orgs} token={token}
-          onClose={() => setEditUser(null)}
-          onSuccess={() => { setEditUser(null); load(); }} />
       )}
       {confirmDelete && (
         <Modal title="Видалити користувача?" onClose={() => setConfirmDelete(null)}>
