@@ -373,6 +373,8 @@ def register_for_event(
     event = db.query(Event).filter(Event.event_id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Подію не знайдено")
+    if event.start_datetime and event.start_datetime < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Реєстрація на цю подію вже закрита")
 
     existing = db.query(Registration).filter(
         Registration.user_id == current_user.user_id,
