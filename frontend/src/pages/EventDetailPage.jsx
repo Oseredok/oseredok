@@ -100,6 +100,7 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
   const participants = event.participants_count ?? 0;
   const maxParticipants = event.max_participants;
   const isFull = maxParticipants != null && participants >= maxParticipants;
+  const isPast = event.start_datetime && new Date(event.start_datetime) < new Date();
   const progressPct = maxParticipants ? Math.min(100, (participants / maxParticipants) * 100) : 0;
 
   const fetchData = useCallback(async () => {
@@ -405,12 +406,13 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
           </button>
         ) : (
           <button
-            type="button"
-            onClick={openRegisterModal}
-            disabled={loading || isFull}
-            style={primaryBtn(loading || isFull)}
-          >
-            {isFull ? "Місця закінчилися" : "Зареєструватись на подію"}
+              type="button"
+              onClick={openRegisterModal}
+              disabled={loading || isFull || isPast}
+              style={primaryBtn(loading || isFull || isPast)}
+            >
+              {isPast ? "Реєстрація закрита" : isFull ? "Місця закінчилися" : "Зареєструватись на подію"}
+          
           </button>
         )}
       </div>
