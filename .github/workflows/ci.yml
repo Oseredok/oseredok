@@ -73,7 +73,7 @@ jobs:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -90,14 +90,3 @@ jobs:
           files: coverage-artifacts/backend-coverage/coverage.xml,coverage-artifacts/frontend-coverage/lcov.info
           flags: backend,frontend
           fail_ci_if_error: true
-
-      - name: Update coverage badge
-        run: python scripts/generate-coverage-badge.py coverage-artifacts/backend-coverage/coverage.xml coverage-artifacts/frontend-coverage/lcov.info .github/badges/coverage.svg
-
-      - name: Commit coverage badge
-        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: update coverage badge"
-          file_pattern: .github/badges/coverage.svg
-          skip_fetch: true
