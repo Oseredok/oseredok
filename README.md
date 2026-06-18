@@ -1,6 +1,6 @@
 # Oseredok
 
-[![codecov](https://codecov.io/gh/Oseredok/oseredok/branch/dev/graph/badge.svg)](https://codecov.io/gh/Oseredok/oseredok?branch=dev)
+[![coverage](.github/badges/coverage.svg)](https://app.codecov.io/gh/Oseredok/oseredok)
 
 # Агрегатор студентських організацій НаУКМА
 Платформа для пошуку студентських організацій та реєстрації на події.

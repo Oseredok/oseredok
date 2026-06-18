@@ -24,6 +24,7 @@ describe("roles", () => {
     expect(roleLabel("admin")).toBe("Адмін");
     expect(roleLabel("student")).toBe("Студент");
     expect(roleLabel("org_owner")).toBe("Організатор");
+    expect(roleLabel("organizer")).toBe("Організатор");
     expect(roleLabel(undefined)).toBe("—");
   });
 });
