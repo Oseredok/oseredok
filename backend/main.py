@@ -17,7 +17,7 @@ from schemas import (
     UserUpdateRequest, OrganizationCreateRequest,
     OrganizationUpdateRequest, EventCreateRequest
 )
-from roles import is_admin, can_create_events
+from roles import is_admin, can_create_events, can_manage_organization
 
 
 def org_to_dict(org: Organization) -> dict:
@@ -150,25 +150,23 @@ def update_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # ✅ адмін або член організації
-    if not is_admin(current_user):
-        membership = db.query(OrganizationMember).filter(
-            OrganizationMember.user_id == current_user.user_id,
-            OrganizationMember.organization_id == org_id
-        ).first()
-        if not membership:
-            raise HTTPException(status_code=403, detail="Доступ заборонено")
-
     org = db.query(Organization).filter(Organization.organization_id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Організацію не знайдено")
 
-    if body.handle and body.handle != org.handle:
-        existing = db.query(Organization).filter(Organization.handle == body.handle).first()
+    if not can_manage_organization(current_user, org_id, db):
+        raise HTTPException(status_code=403, detail="Немає прав на редагування цієї організації")
+
+    updates = body.model_dump(exclude_unset=True)
+    if not is_admin(current_user):
+        updates.pop("status", None)
+
+    if updates.get("handle") and updates["handle"] != org.handle:
+        existing = db.query(Organization).filter(Organization.handle == updates["handle"]).first()
         if existing:
             raise HTTPException(status_code=409, detail="Такий handle вже зайнято")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    for field, value in updates.items():
         setattr(org, field, value)
 
     db.commit()
