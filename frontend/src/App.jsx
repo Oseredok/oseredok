@@ -12,6 +12,7 @@ import HomePage from "./pages/HomePage";
 import OrgDetailPage from "./pages/OrgDetailPage";
 import OrganizationsPage from "./pages/OrganizationsPage";
 import ProfilePage from "./pages/ProfilePage";
+import { OrgDashboardPage } from "./pages/OrgDashboardPage";
 import { canCreateEvent, isAdmin } from "./utils/roles";
 import { layout } from "./theme/tokens";
 
@@ -109,6 +110,8 @@ export default function App() {
       setView("admin-edit-org");
     } else if (target === "create-event") {
       setView("create-event");
+    } else if (target === "org-dashboard") {   // ✅ додано
+      setView("org-dashboard");
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -210,6 +213,15 @@ export default function App() {
 
         {view === "create-event" && canCreateEvent(user?.role) && (
           <CreateEventPage user={user} onSuccess={() => navigate("events")} />
+        )}
+
+        {/*  Панель організатора */}
+        {view === "org-dashboard" && user?.role === "org_owner" && (
+          <OrgDashboardPage
+            user={user}
+            onNavigate={navigate}
+            onNavigateToEvent={navigateToEvent}
+          />
         )}
       </main>
 
