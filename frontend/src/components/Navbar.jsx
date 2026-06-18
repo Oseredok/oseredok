@@ -7,7 +7,8 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
     { id: "events", label: "Події" },
   ];
   if (isOrganizer(user?.role)) {
-    loggedInNav.push({ id: "organizer", label: "Панель організатора" });
+    const id = user?.role === "org_owner" ? "org-dashboard" : "organizer";
+    loggedInNav.push({ id, label: "Панель організатора" });
   }
   if (isAdmin(user?.role)) {
     loggedInNav.push({ id: "admin", label: "Адмін-панель" });
@@ -16,7 +17,7 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
   const isActive = (id) => {
     if (id === "organizations") return view === "organizations" || view === "org-detail";
     if (id === "events") return view === "events" || view === "event-detail" || view === "create-event";
-    if (id === "organizer") return view === "organizer" || view === "organizer-edit-org";
+    if (id === "organizer" || id === "org-dashboard") return view === "organizer" || view === "organizer-edit-org" || view === "org-dashboard";
     if (id === "admin") return view === "admin" || view === "admin-create-org" || view === "admin-edit-org";
     if (id === "org-dashboard") return view === "org-dashboard" || view === "org-edit-event";
     return false;
