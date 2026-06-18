@@ -9,6 +9,41 @@ function authHeaders() {
   };
 }
 
+<<<<<<< HEAD
+=======
+function OrgLogo({ logoUrl, initials, catColor }) {
+  const [failed, setFailed] = useState(false);
+  const showImage = Boolean(logoUrl) && !failed;
+
+  return (
+    <div
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: radius.lg,
+        overflow: "hidden",
+        background: showImage ? "transparent" : colors.primaryLight,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      {showImage ? (
+        <img
+          src={logoUrl}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span style={{ fontWeight: 800, color: catColor || colors.primary }}>{initials}</span>
+      )}
+    </div>
+  );
+}
+
+>>>>>>> 9121a50eb1eb6c16876595166dbb2da42ba37f96
 export function OrganizerPanelPage({ user, onEditOrg }) {
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +118,7 @@ export function OrganizerPanelPage({ user, onEditOrg }) {
                   flexWrap: "wrap",
                 }}
               >
+<<<<<<< HEAD
                 <div
                   style={{
                     width: 56,
@@ -102,6 +138,9 @@ export function OrganizerPanelPage({ user, onEditOrg }) {
                     <span style={{ fontWeight: 800, color: colors.primary }}>{initials}</span>
                   )}
                 </div>
+=======
+                <OrgLogo logoUrl={org.logo_url} initials={initials} catColor={catColor} />
+>>>>>>> 9121a50eb1eb6c16876595166dbb2da42ba37f96
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ fontWeight: 700, fontSize: 16, color: colors.text, fontFamily: fonts.heading }}>
                     {org.name}

@@ -1,5 +1,6 @@
 
 from sqlalchemy import Column, String, Text, TIMESTAMP, ForeignKey, Integer
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from database import Base
 
 class Organization(Base):
@@ -11,7 +12,11 @@ class Organization(Base):
     description = Column(Text)
     category = Column(String(100))
     faculty = Column(String(255))
+<<<<<<< HEAD
     logo_url = Column(String(255))
+=======
+    logo_url = Column(MEDIUMTEXT)
+>>>>>>> 9121a50eb1eb6c16876595166dbb2da42ba37f96
     contact_email = Column(String(255))
     phone = Column(String(50))
     instagram = Column(String(255))
