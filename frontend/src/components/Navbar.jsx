@@ -1,20 +1,22 @@
 import { colors, fonts, layout, radius, shadows } from "../theme/tokens";
+import { isAdmin, isOrganizer } from "../utils/roles";
 
 export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout }) {
   const loggedInNav = [
     { id: "organizations", label: "Організації" },
     { id: "events", label: "Події" },
   ];
-  if (user?.role === "admin") {
-    loggedInNav.push({ id: "admin", label: "Адмін-панель" });
+  if (isOrganizer(user?.role)) {
+    loggedInNav.push({ id: "organizer", label: "Панель організатора" });
   }
-  if (user?.role === "org_owner") {
-    loggedInNav.push({ id: "org-dashboard", label: "Панель організатора" });
+  if (isAdmin(user?.role)) {
+    loggedInNav.push({ id: "admin", label: "Адмін-панель" });
   }
 
   const isActive = (id) => {
     if (id === "organizations") return view === "organizations" || view === "org-detail";
     if (id === "events") return view === "events" || view === "event-detail" || view === "create-event";
+    if (id === "organizer") return view === "organizer" || view === "organizer-edit-org";
     if (id === "admin") return view === "admin" || view === "admin-create-org" || view === "admin-edit-org";
     if (id === "org-dashboard") return view === "org-dashboard" || view === "org-edit-event";
     return false;

@@ -6,6 +6,7 @@ import { AdminPage } from "./pages/AdminPage";
 import { AdminOrgEditPage } from "./pages/AdminOrgEditPage";
 import { CreateEventPage } from "./pages/CreateEventPage";
 import { CreateOrganizationPage } from "./pages/CreateOrganizationPage";
+import { OrganizerPanelPage } from "./pages/OrganizerPanelPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
 import HomePage from "./pages/HomePage";
@@ -13,7 +14,7 @@ import OrgDetailPage from "./pages/OrgDetailPage";
 import OrganizationsPage from "./pages/OrganizationsPage";
 import ProfilePage from "./pages/ProfilePage";
 import { OrgDashboardPage } from "./pages/OrgDashboardPage";
-import { canCreateEvent, isAdmin } from "./utils/roles";
+import { canCreateEvent, isAdmin, isOrganizer } from "./utils/roles";
 import { layout } from "./theme/tokens";
 
 export default function App() {
@@ -108,6 +109,12 @@ export default function App() {
     } else if (target === "admin-edit-org") {
       if (item) setSelectedOrg(item);
       setView("admin-edit-org");
+    } else if (target === "organizer") {
+      setView("organizer");
+      setSelectedOrg(null);
+    } else if (target === "organizer-edit-org") {
+      if (item) setSelectedOrg(item);
+      setView("organizer-edit-org");
     } else if (target === "create-event") {
       setView("create-event");
     } else if (target === "org-dashboard") {   // ✅ додано
@@ -205,7 +212,22 @@ export default function App() {
         {view === "admin-edit-org" && isAdmin(user?.role) && selectedOrg && (
           <AdminOrgEditPage
             org={selectedOrg}
+            isAdminMode
             onBack={() => navigate("admin")}
+            onCreateEvent={() => navigate("create-event")}
+            onNavigateToEvent={navigateToEvent}
+          />
+        )}
+
+        {view === "organizer" && isOrganizer(user?.role) && (
+          <OrganizerPanelPage user={user} onEditOrg={(org) => navigate("organizer-edit-org", org)} />
+        )}
+
+        {view === "organizer-edit-org" && isOrganizer(user?.role) && selectedOrg && (
+          <AdminOrgEditPage
+            org={selectedOrg}
+            isAdminMode={false}
+            onBack={() => navigate("organizer")}
             onCreateEvent={() => navigate("create-event")}
             onNavigateToEvent={navigateToEvent}
           />
