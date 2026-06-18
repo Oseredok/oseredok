@@ -33,4 +33,9 @@ describe("orgForm", () => {
       status: "pending",
     });
   });
+
+  it("keeps empty strings for missing optional fields", () => {
+    expect(emptyForm({ name: "Only name" }).phone).toBe("");
+    expect(emptyForm({ name: "Only name" }).website).toBe("");
+  });
 });
