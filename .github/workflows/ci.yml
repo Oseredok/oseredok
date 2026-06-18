@@ -95,6 +95,7 @@ jobs:
         run: python scripts/generate-coverage-badge.py coverage-artifacts/backend-coverage/coverage.xml coverage-artifacts/frontend-coverage/lcov.info .github/badges/coverage.svg
 
       - name: Commit coverage badge
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: update coverage badge"
