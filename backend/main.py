@@ -17,7 +17,7 @@ from schemas import (
     UserUpdateRequest, OrganizationCreateRequest,
     OrganizationUpdateRequest, EventCreateRequest
 )
-from roles import is_admin, can_create_events
+from roles import is_admin, can_create_events, can_manage_organization
 
 
 def org_to_dict(org: Organization) -> dict:
@@ -36,6 +36,30 @@ def org_to_dict(org: Organization) -> dict:
         "website": org.website,
         "status": org.status or "active",
     }
+
+
+from database import Base, engine, SessionLocal
+import models
+Base.metadata.create_all(bind=engine)
+
+# Run migrations
+import os
+from sqlalchemy import text
+migrations_dir = os.path.join(os.path.dirname(__file__), "..", "db", "migrations")
+if os.path.exists(migrations_dir):
+    db = SessionLocal()
+    for fname in sorted(os.listdir(migrations_dir)):
+        if fname.endswith(".sql"):
+            with open(os.path.join(migrations_dir, fname)) as f:
+                for statement in f.read().split(";"):
+                    stmt = statement.strip()
+                    if stmt:
+                        try:
+                            db.execute(text(stmt))
+                        except Exception:
+                            pass
+    db.commit()
+    db.close()
 
 app = FastAPI()
 
@@ -126,25 +150,27 @@ def update_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if not is_admin(current_user):
-        raise HTTPException(status_code=403, detail="Тільки адміністратор може редагувати організації")
-
     org = db.query(Organization).filter(Organization.organization_id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Організацію не знайдено")
 
-    if body.handle and body.handle != org.handle:
-        existing = db.query(Organization).filter(Organization.handle == body.handle).first()
+    if not can_manage_organization(current_user, org_id, db):
+        raise HTTPException(status_code=403, detail="Немає прав на редагування цієї організації")
+
+    updates = body.model_dump(exclude_unset=True)
+    if not is_admin(current_user):
+        updates.pop("status", None)
+
+    if updates.get("handle") and updates["handle"] != org.handle:
+        existing = db.query(Organization).filter(Organization.handle == updates["handle"]).first()
         if existing:
             raise HTTPException(status_code=409, detail="Такий handle вже зайнято")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    for field, value in updates.items():
         setattr(org, field, value)
 
     db.commit()
-    db.refresh(org)
     return org_to_dict(org)
-
 
 @app.delete("/organizations/{org_id}")
 def delete_organization(
@@ -159,6 +185,9 @@ def delete_organization(
     if not org:
         raise HTTPException(status_code=404, detail="Організацію не знайдено")
 
+    db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == org_id
+    ).delete()
     db.delete(org)
     db.commit()
     return {"message": "Організацію видалено"}
@@ -211,7 +240,6 @@ def create_organization(
         ))
 
     db.commit()
-    db.refresh(new_org)
     return {
         "organization_id": new_org.organization_id,
         "name": new_org.name,
@@ -348,6 +376,8 @@ def register_for_event(
     event = db.query(Event).filter(Event.event_id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Подію не знайдено")
+    if event.start_datetime and event.start_datetime < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Реєстрація на цю подію вже закрита")
 
     existing = db.query(Registration).filter(
         Registration.user_id == current_user.user_id,
@@ -542,3 +572,174 @@ def login(body: UserLoginRequest, db: Session = Depends(get_db)):
 
     token = create_token(user.user_id, user.email)
     return TokenResponse(token=token, userId=user.user_id, email=user.email)
+
+
+# Отримати всіх користувачів
+@app.get("/users")
+def get_all_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+    
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    return [
+        {
+            "user_id": u.user_id,
+            "full_name": u.full_name,
+            "email": u.email,
+            "role": u.role,
+            "faculty": u.faculty,
+            "created_at": u.created_at,
+        }
+        for u in users
+    ]
+
+
+# Видалити користувача
+@app.delete("/users/{user_id}")
+def delete_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+    if user_id == current_user.user_id:
+        raise HTTPException(status_code=400, detail="Не можна видалити себе")
+
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
+
+    db.query(Registration).filter(Registration.user_id == user_id).delete()
+    db.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).delete()
+    db.delete(user)
+    db.commit()
+    return {"message": "Користувача видалено"}
+
+
+# Створити користувача (адмін)
+@app.post("/users", status_code=201)
+def create_user(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Доступ заборонено")
+
+    existing = db.query(User).filter(User.email == body["email"]).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Email вже зареєстровано")
+
+    new_user = User(
+        user_id=str(uuid.uuid4()),
+        email=body["email"],
+        full_name=body.get("full_name"),
+        password_hash=hash_password(body["password"]),
+        role=body.get("role", "student"),
+        faculty=body.get("faculty"),
+        created_at=datetime.utcnow()
+    )
+    db.add(new_user)
+    db.commit()
+    return {"user_id": new_user.user_id, "message": "Користувача створено"}
+
+
+
+@app.get("/users/me/organization")
+def get_my_organization(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    membership = db.query(OrganizationMember).filter(
+        OrganizationMember.user_id == current_user.user_id
+    ).first()
+
+    if not membership:
+        raise HTTPException(status_code=404, detail="Організацію не знайдено")
+
+    org = db.query(Organization).filter(
+        Organization.organization_id == membership.organization_id
+    ).first()
+
+    if not org:
+        raise HTTPException(status_code=404, detail="Організацію не знайдено")
+
+    return org_to_dict(org)
+
+
+@app.get("/events/{event_id}/participants")
+def get_event_participants(
+    event_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Перевіряємо що юзер є членом організації цієї події
+    event = db.query(Event).filter(Event.event_id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Подію не знайдено")
+
+    if not is_admin(current_user):
+        membership = db.query(OrganizationMember).filter(
+            OrganizationMember.user_id == current_user.user_id,
+            OrganizationMember.organization_id == event.organization_id
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=403, detail="Доступ заборонено")
+
+    regs = db.query(Registration, User).join(
+        User, Registration.user_id == User.user_id
+    ).filter(
+        Registration.event_id == event_id,
+        Registration.status != "cancelled"
+    ).all()
+
+    return [
+        {
+            "full_name": user.full_name,
+            "email": user.email,
+            "registered_at": reg.registered_at,
+        }
+        for reg, user in regs
+    ]
+
+
+@app.patch("/events/{event_id}")
+def update_event(
+    event_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    event = db.query(Event).filter(Event.event_id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Подію не знайдено")
+
+    # Перевірка що юзер є членом організації
+    if not is_admin(current_user):
+        membership = db.query(OrganizationMember).filter(
+            OrganizationMember.user_id == current_user.user_id,
+            OrganizationMember.organization_id == event.organization_id
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=403, detail="Доступ заборонено")
+
+    allowed = ["title", "description", "location", "start_datetime", "end_datetime", "max_participants"]
+    for key, value in body.items():
+        if key in allowed:
+            setattr(event, key, value)
+
+    db.commit()
+    db.refresh(event)
+    return {
+        "event_id": event.event_id,
+        "title": event.title,
+        "description": event.description,
+        "location": event.location,
+        "start_datetime": event.start_datetime,
+        "end_datetime": event.end_datetime,
+        "max_participants": event.max_participants,
+    }

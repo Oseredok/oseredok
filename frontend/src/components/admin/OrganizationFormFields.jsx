@@ -253,6 +253,16 @@ export default function OrganizationFormFields({
               placeholder="itclub_ukma"
             />
           </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={labelStyle}>Веб-сайт</label>
+            <input
+              type="url"
+              value={form.website || ""}
+              onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
+              placeholder="https://itclub.ukma.edu.ua"
+              style={inputStyle}
+            />
+          </div>
         </div>
       </SectionCard>
 

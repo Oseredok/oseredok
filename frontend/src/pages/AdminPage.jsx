@@ -8,6 +8,7 @@ import {
   IconTrash,
 } from "../components/admin/AdminIcons";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
+import AdminUsersPage from "./AdminUsersPage";
 
 function authHeaders() {
   return {
@@ -31,13 +32,21 @@ function iconActionBtn(color = colors.textSecondary, bg = colors.surface) {
   };
 }
 
+const TABS = [
+  { id: "orgs", label: "Організації" },
+  { id: "users", label: "Користувачі" },
+];
+
 export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
+  const [activeTab, setActiveTab] = useState("orgs");
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("Всі");
   const [filterStatus, setFilterStatus] = useState("Всі");
   const [message, setMessage] = useState("");
+
+  const [usersRef, setUsersRef] = useState(null); // 🔥 FIX
 
   const fetchOrganizations = useCallback(async () => {
     setLoading(true);
@@ -62,8 +71,14 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
         !search ||
         org.name?.toLowerCase().includes(search.toLowerCase()) ||
         org.handle?.toLowerCase().includes(search.toLowerCase());
-      const matchCat = filterCategory === "Всі" || org.category === filterCategory;
-      const matchStatus = filterStatus === "Всі" || (org.status || "active") === filterStatus;
+
+      const matchCat =
+        filterCategory === "Всі" || org.category === filterCategory;
+
+      const matchStatus =
+        filterStatus === "Всі" ||
+        (org.status || "active") === filterStatus;
+
       return matchSearch && matchCat && matchStatus;
     });
   }, [organizations, search, filterCategory, filterStatus]);
@@ -84,12 +99,14 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
 
   const toggleStatus = async (org) => {
     const newStatus = (org.status || "active") === "active" ? "inactive" : "active";
+
     try {
       const res = await fetch(`${API}/organizations/${org.organization_id}`, {
         method: "PATCH",
         headers: authHeaders(),
         body: JSON.stringify({ status: newStatus }),
       });
+
       if (res.ok) fetchOrganizations();
     } catch {
       setMessage("Помилка зміни статусу");
@@ -97,14 +114,15 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
   };
 
   const handleDelete = async (org) => {
-    if (!window.confirm(`Видалити організацію «${org.name}»? Цю дію не можна скасувати.`)) return;
+    if (!window.confirm(`Видалити «${org.name}»?`)) return;
+
     try {
       const res = await fetch(`${API}/organizations/${org.organization_id}`, {
         method: "DELETE",
         headers: authHeaders(),
       });
+
       if (res.ok) fetchOrganizations();
-      else setMessage("Не вдалося видалити");
     } catch {
       setMessage("Немає зв'язку з сервером");
     }
@@ -122,6 +140,136 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
     background: colors.surface,
   };
 
+  const tabBar = (
+    <div style={{ display: "flex", gap: 0, marginBottom: 28, borderBottom: `1px solid ${colors.borderLight}` }}>
+      {TABS.map((tab) => {
+        const active = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: "10px 24px",
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              fontFamily: fonts.body,
+              fontWeight: 700,
+              fontSize: 14,
+              color: active ? colors.primary : colors.textSecondary,
+              borderBottom: active ? `2px solid ${colors.primary}` : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+// ================= USERS TAB =================
+if (activeTab === "users") {
+  return (
+    <div style={{ animation: "fadeUp 0.5s ease both" }}>
+      {/* Header (як в orgs) */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: 28,
+          flexWrap: "wrap",
+          gap: 16,
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              fontSize: 32,
+              fontWeight: 800,
+              color: colors.text,
+              fontFamily: fonts.heading,
+              marginBottom: 6,
+            }}
+          >
+            Адмін-панель
+          </h1>
+          <p
+            style={{
+              fontSize: 14,
+              color: colors.textSecondary,
+              fontFamily: fonts.body,
+            }}
+          >
+            Керування користувачами · {user?.email}
+          </p>
+        </div>
+
+        {/* Buttons (ТОЧНО як в orgs) */}
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => usersRef?.load?.()}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "10px 16px",
+              borderRadius: radius.md,
+              fontSize: 13,
+              fontWeight: 600,
+              border: `1px solid ${colors.border}`,
+              background: colors.surface,
+              color: colors.textSecondary,
+              cursor: "pointer",
+              fontFamily: fonts.body,
+            }}
+          >
+            <IconRefresh size={16} />
+            Оновити
+          </button>
+
+          <button
+            type="button"
+            onClick={() => usersRef?.openCreate?.()}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "10px 20px",
+              borderRadius: radius.md,
+              fontSize: 14,
+              fontWeight: 700,
+              border: "none",
+              background: colors.primary,
+              color: colors.white,
+              cursor: "pointer",
+              fontFamily: fonts.body,
+            }}
+          >
+            <IconPlus size={16} color={colors.white} />
+            Створити користувача
+          </button>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      {tabBar}
+
+      {/* Content */}
+      <AdminUsersPage user={user} onRef={setUsersRef} />
+    </div>
+  );
+}
+
+  // ── Orgs tab ───────────────────────────────────────────────────
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: 80, color: colors.textMuted, fontFamily: fonts.body }}>
@@ -132,6 +280,7 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
 
   return (
     <div style={{ animation: "fadeUp 0.5s ease both" }}>
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 800, color: colors.text, fontFamily: fonts.heading, marginBottom: 6 }}>
@@ -187,6 +336,10 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
         </div>
       </div>
 
+      {/* Tab bar */}
+      {tabBar}
+
+      {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }} className="admin-stats">
         {[
           { label: "Всього", value: stats.total, color: colors.primary },
@@ -209,6 +362,7 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
         ))}
       </div>
 
+      {/* Filters */}
       <div
         style={{
           background: colors.surface,
@@ -243,6 +397,7 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
         </select>
       </div>
 
+      {/* Error message */}
       {message && (
         <div
           style={{
@@ -258,6 +413,7 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
         </div>
       )}
 
+      {/* Table */}
       <div
         style={{
           background: colors.surface,

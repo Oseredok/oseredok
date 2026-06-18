@@ -12,3 +12,20 @@ def can_create_events(user) -> bool:
 
 def is_organizer(user) -> bool:
     return user.role in ORGANIZER_ROLES
+
+
+def can_manage_organization(user, org_id, db) -> bool:
+    if is_admin(user):
+        return True
+    if not is_organizer(user):
+        return False
+    from models import OrganizationMember
+    return (
+        db.query(OrganizationMember)
+        .filter(
+            OrganizationMember.user_id == user.user_id,
+            OrganizationMember.organization_id == org_id,
+        )
+        .first()
+        is not None
+    )
