@@ -16,6 +16,11 @@ node_modules/
 dist/
 build/
 .vite/
+htmlcov/
+.coverage
+coverage/
+coverage.xml
+*.lcov
 
 # Загальне
 .DS_Store

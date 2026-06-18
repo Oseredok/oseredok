@@ -1,0 +1,11 @@
+[run]
+source = .
+omit =
+    tests/*
+    venv/*
+    .venv/*
+    seed_data.py
+
+[report]
+exclude_lines =
+    pragma: no cover

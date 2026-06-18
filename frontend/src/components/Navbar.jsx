@@ -45,7 +45,11 @@ export default function Navbar({ view, user, onNavigate, onOpenAuth, onLogout })
             onClick={() => onNavigate("home")}
             style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
+<<<<<<< HEAD
             <div style={{ width: 36, height: 36, borderRadius: radius.sm, background: colors.primary, display: "flex", alignItems: "center", justifyContent: "center", color: colors.white, fontSize: 18, fontWeight: 800 }}>О</div>
+=======
+            <div style={{ width: 36, height: 36, borderRadius: radius.sm, background: colors.primary, display: "flex", alignItems: "center", justifyContent: "center", color: colors.white, fontSize: 20, fontWeight: 400, lineHeight: 1 }}>✦</div>
+>>>>>>> 9121a50eb1eb6c16876595166dbb2da42ba37f96
             <span style={{ fontSize: 20, fontWeight: 800, color: colors.text, fontFamily: fonts.heading, letterSpacing: "-0.02em" }}>Осередок</span>
           </button>
 
