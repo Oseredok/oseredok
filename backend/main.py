@@ -707,3 +707,41 @@ def get_event_participants(
         }
         for reg, user in regs
     ]
+
+
+@app.patch("/events/{event_id}")
+def update_event(
+    event_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    event = db.query(Event).filter(Event.event_id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Подію не знайдено")
+
+    # Перевірка що юзер є членом організації
+    if not is_admin(current_user):
+        membership = db.query(OrganizationMember).filter(
+            OrganizationMember.user_id == current_user.user_id,
+            OrganizationMember.organization_id == event.organization_id
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=403, detail="Доступ заборонено")
+
+    allowed = ["title", "description", "location", "start_datetime", "end_datetime", "max_participants"]
+    for key, value in body.items():
+        if key in allowed:
+            setattr(event, key, value)
+
+    db.commit()
+    db.refresh(event)
+    return {
+        "event_id": event.event_id,
+        "title": event.title,
+        "description": event.description,
+        "location": event.location,
+        "start_datetime": event.start_datetime,
+        "end_datetime": event.end_datetime,
+        "max_participants": event.max_participants,
+    }
