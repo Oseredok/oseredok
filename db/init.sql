@@ -8,11 +8,7 @@ CREATE TABLE IF NOT EXISTS organizations (
     description TEXT,
     category VARCHAR(100),
     faculty VARCHAR(255),
-<<<<<<< HEAD
-    logo_url VARCHAR(255),
-=======
     logo_url MEDIUMTEXT,
->>>>>>> 9121a50eb1eb6c16876595166dbb2da42ba37f96
     contact_email VARCHAR(255),
     phone VARCHAR(50),
     instagram VARCHAR(255),

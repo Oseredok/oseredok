@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-export function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-=======
 function compressDataUrl(dataUrl, { maxSize = 256, maxBytes = 200000 } = {}) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -50,7 +43,6 @@ export function fileToDataUrl(file, options) {
       compressDataUrl(dataUrl, options).then(resolve).catch(reject);
     };
     reader.onerror = () => reject(reader.error);
->>>>>>> 9121a50eb1eb6c16876595166dbb2da42ba37f96
     reader.readAsDataURL(file);
   });
 }
