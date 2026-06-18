@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API } from "../api";
 import OrganizationFormFields from "../components/admin/OrganizationFormFields";
+import LogoUploadField from "../components/LogoUploadField";
 import {
   IconBuilding,
   IconCheck,
   IconEdit,
   IconPlus,
   IconTrash,
-  IconUpload,
-  IconX,
 } from "../components/admin/AdminIcons";
-import { IconArrowLeft } from "../components/ui/Icons";
+import { IconArrowLeft, IconX } from "../components/ui/Icons";
+import { emptyForm, fileToDataUrl } from "../utils/orgForm";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
 
 function authHeaders() {
@@ -39,69 +39,100 @@ function eventStatusLabel(event) {
   return { label: "Активна", color: colors.success, bg: colors.successBg };
 }
 
-export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent }) {
-  const [form, setForm] = useState({
-    name: org.name || "",
-    handle: org.handle || "",
-    description: org.description || "",
-    category: org.category || "",
-    faculty: org.faculty || "",
-    contact_email: org.contact_email || "",
-    phone: org.phone || "",
-    instagram: org.instagram || "",
-    telegram: org.telegram || "",
-    status: org.status || "active",
-  });
+export function AdminOrgEditPage({
+  org: initialOrg,
+  isAdminMode = true,
+  onBack,
+  onCreateEvent,
+  onNavigateToEvent,
+}) {
+  const [form, setForm] = useState(emptyForm(initialOrg));
   const [events, setEvents] = useState([]);
   const [logoFile, setLogoFile] = useState(null);
-  const [logoPreview, setLogoPreview] = useState(org.logo_url || null);
+  const [logoPreview, setLogoPreview] = useState(initialOrg.logo_url || null);
+  const [logoRemoved, setLogoRemoved] = useState(false);
+  const [loadingOrg, setLoadingOrg] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
-  const fileRef = useRef(null);
+
+  const orgId = initialOrg.organization_id;
+
+  const fetchOrg = useCallback(async () => {
+    setLoadingOrg(true);
+    try {
+      const res = await fetch(`${API}/organizations/${orgId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setForm(emptyForm(data));
+        setLogoPreview(data.logo_url || null);
+        setLogoRemoved(false);
+        setLogoFile(null);
+      }
+    } catch {
+      setMessage("Не вдалося завантажити організацію");
+    } finally {
+      setLoadingOrg(false);
+    }
+  }, [orgId]);
 
   const fetchEvents = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/events?organization_id=${org.organization_id}`);
+      const res = await fetch(`${API}/events?organization_id=${orgId}`);
       const data = await res.json();
       setEvents(data);
     } catch {
       setEvents([]);
     }
-  }, [org.organization_id]);
+  }, [orgId]);
 
   useEffect(() => {
+    fetchOrg();
     fetchEvents();
-  }, [fetchEvents]);
+  }, [fetchOrg, fetchEvents]);
 
-  const handleLogoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleLogoChange = (file) => {
     setLogoFile(file);
     setLogoPreview(URL.createObjectURL(file));
+    setLogoRemoved(false);
   };
 
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview(null);
-    setForm((f) => ({ ...f, logo_url: null }));
-    if (fileRef.current) fileRef.current.value = "";
+    setLogoRemoved(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setMessage("");
-    const payload = { ...form };
-    if (logoPreview && !logoFile) payload.logo_url = logoPreview;
-    else if (logoFile) payload.logo_url = logoPreview;
 
     try {
-      const res = await fetch(`${API}/organizations/${org.organization_id}`, {
+      const payload = { ...form };
+      if (isAdminMode) {
+        payload.status = form.status;
+      } else {
+        delete payload.status;
+      }
+
+      if (logoFile) {
+        payload.logo_url = await fileToDataUrl(logoFile);
+      } else if (logoRemoved) {
+        payload.logo_url = null;
+      }
+
+      const res = await fetch(`${API}/organizations/${orgId}`, {
         method: "PATCH",
         headers: authHeaders(),
         body: JSON.stringify(payload),
       });
+
       if (res.ok) {
+        const updated = await res.json();
+        setForm(emptyForm(updated));
+        setLogoPreview(updated.logo_url || null);
+        setLogoFile(null);
+        setLogoRemoved(false);
         setMessage("Зміни збережено");
       } else {
         const data = await res.json().catch(() => ({}));
@@ -123,6 +154,14 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
   const catColor = categoryColors[form.category] || colors.primary;
   const initials = form.name?.slice(0, 2).toUpperCase() || "OR";
 
+  if (loadingOrg) {
+    return (
+      <div style={{ textAlign: "center", padding: 80, color: colors.textMuted, fontFamily: fonts.body }}>
+        Завантаження...
+      </div>
+    );
+  }
+
   return (
     <div style={{ animation: "fadeUp 0.5s ease both" }}>
       <button
@@ -143,10 +182,9 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
         }}
       >
         <IconArrowLeft size={16} />
-        Назад до списку
+        {isAdminMode ? "Назад до списку" : "Назад до панелі організатора"}
       </button>
 
-      {/* Org summary card */}
       <div
         style={{
           background: colors.surface,
@@ -182,34 +220,27 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
         </div>
         <div style={{ flex: 1, minWidth: 200 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: colors.text, fontFamily: fonts.heading, marginBottom: 4 }}>
-            {form.name || org.name}
+            {form.name}
           </h1>
-          {form.handle && (
-            <div style={{ fontSize: 14, color: colors.textMuted, marginBottom: 10 }}>@{form.handle}</div>
-          )}
+          {form.handle && <div style={{ fontSize: 14, color: colors.textMuted, marginBottom: 10 }}>@{form.handle}</div>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                padding: "4px 10px",
-                borderRadius: radius.pill,
-                fontSize: 12,
-                fontWeight: 600,
-                background: active ? colors.successBg : colors.borderLight,
-                color: active ? colors.success : colors.textMuted,
-              }}
-            >
-              {active ? (
-                <>
-                  <IconCheck size={12} color={colors.success} />
-                  Активна
-                </>
-              ) : (
-                "Неактивна"
-              )}
-            </span>
+            {isAdminMode && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "4px 10px",
+                  borderRadius: radius.pill,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: active ? colors.successBg : colors.borderLight,
+                  color: active ? colors.success : colors.textMuted,
+                }}
+              >
+                {active ? "Активна" : "Неактивна"}
+              </span>
+            )}
             {form.category && (
               <span
                 style={{
@@ -222,20 +253,6 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
                 }}
               >
                 {form.category}
-              </span>
-            )}
-            {form.faculty && (
-              <span
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: radius.pill,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  background: colors.bg,
-                  color: colors.textSecondary,
-                }}
-              >
-                {form.faculty}
               </span>
             )}
           </div>
@@ -264,7 +281,7 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
           </button>
           <button
             type="button"
-            onClick={() => onCreateEvent?.(org)}
+            onClick={() => onCreateEvent?.({ ...initialOrg, ...form, organization_id: orgId })}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -286,7 +303,6 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
         </div>
       </div>
 
-      {/* Events section */}
       <div
         style={{
           background: colors.surface,
@@ -310,7 +326,7 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
           </h2>
           <button
             type="button"
-            onClick={() => onCreateEvent?.(org)}
+            onClick={() => onCreateEvent?.({ ...initialOrg, ...form, organization_id: orgId })}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -359,9 +375,7 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
                   <div style={{ fontSize: 13, color: colors.textSecondary }}>
                     {formatEventTime(event.start_datetime)}
                     {event.location ? ` · ${event.location}` : ""}
-                    {event.max_participants != null
-                      ? ` · ${event.participants_count ?? 0}/${event.max_participants}`
-                      : ""}
+                    {event.max_participants != null ? ` · ${event.participants_count ?? 0}/${event.max_participants}` : ""}
                   </div>
                 </div>
                 <span
@@ -378,12 +392,7 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
                   {status.label}
                 </span>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateToEvent?.(event)}
-                    style={iconBtnStyle}
-                    title="Редагувати"
-                  >
+                  <button type="button" onClick={() => onNavigateToEvent?.(event)} style={iconBtnStyle} title="Редагувати">
                     <IconEdit size={16} />
                   </button>
                   <button
@@ -401,71 +410,6 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
         )}
       </div>
 
-      {/* Logo upload */}
-      <div
-        style={{
-          background: colors.surface,
-          borderRadius: radius.xl,
-          border: `1px solid ${colors.borderLight}`,
-          padding: 24,
-          marginBottom: 24,
-        }}
-      >
-        <h2 style={{ fontSize: 16, fontWeight: 700, fontFamily: fonts.heading, color: colors.text, marginBottom: 16 }}>
-          Лого організації
-        </h2>
-        <div
-          onClick={() => fileRef.current?.click()}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            const file = e.dataTransfer.files?.[0];
-            if (file) {
-              setLogoFile(file);
-              setLogoPreview(URL.createObjectURL(file));
-            }
-          }}
-          style={{
-            border: `2px dashed ${colors.border}`,
-            borderRadius: radius.lg,
-            padding: 40,
-            textAlign: "center",
-            cursor: "pointer",
-            background: colors.bg,
-          }}
-        >
-          <div style={{ color: colors.textMuted, marginBottom: 12 }}>
-            <IconUpload size={36} color={colors.textMuted} />
-          </div>
-          <p style={{ fontSize: 14, color: colors.textSecondary, fontFamily: fonts.body, margin: 0 }}>
-            Перетягніть файл сюди або натисніть для завантаження
-          </p>
-          <p style={{ fontSize: 12, color: colors.textMuted, marginTop: 6 }}>PNG, JPG до 2 МБ</p>
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleLogoChange} />
-        </div>
-        {logoFile && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginTop: 12,
-              padding: "10px 14px",
-              borderRadius: radius.md,
-              background: colors.bg,
-              fontSize: 13,
-            }}
-          >
-            <IconBuilding size={16} color={colors.textMuted} />
-            <span style={{ flex: 1 }}>{logoFile.name}</span>
-            <button type="button" onClick={removeLogo} style={{ background: "none", border: "none", cursor: "pointer", color: colors.error }}>
-              <IconX size={16} color={colors.error} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Edit form */}
       <div id="edit-form">
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20 }}>
           <div
@@ -487,7 +431,15 @@ export function AdminOrgEditPage({ org, onBack, onCreateEvent, onNavigateToEvent
         </div>
 
         <form onSubmit={handleSubmit}>
-          <OrganizationFormFields form={form} setForm={setForm} showStatus />
+          <LogoUploadField
+            preview={logoPreview}
+            fileName={logoFile?.name}
+            onChange={handleLogoChange}
+            onRemove={removeLogo}
+            label="Аватар / лого організації"
+          />
+
+          <OrganizationFormFields form={form} setForm={setForm} showStatus={isAdminMode} />
 
           {message && (
             <div
