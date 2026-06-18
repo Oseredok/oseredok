@@ -4,6 +4,7 @@ import OrganizationFormFields from "../components/admin/OrganizationFormFields";
 import LogoUploadField from "../components/LogoUploadField";
 import { IconBuilding, IconCheck, IconX } from "../components/admin/AdminIcons";
 import { useDebounce } from "../hooks/useDebounce";
+import { fileToDataUrl } from "../utils/orgForm";
 import { roleLabel } from "../utils/roles";
 import { colors, fonts, radius } from "../theme/tokens";
 
@@ -60,7 +61,7 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
     setMessage("");
     try {
       const payload = { ...form, owner_id: selectedOwner.user_id };
-      if (logoPreview) payload.logo_url = logoPreview;
+      if (logoFile) payload.logo_url = await fileToDataUrl(logoFile);
 
       const res = await fetch(`${API}/organizations`, {
         method: "POST",

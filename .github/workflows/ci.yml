@@ -5,6 +5,10 @@ on:
     branches: [dev, main]
   pull_request:
     branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   backend:
@@ -28,18 +32,14 @@ jobs:
 
       - name: Run tests with coverage
         env:
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: "sqlite:///:memory:"
           JWT_SECRET: ci-test-secret
         run: pytest
 
-      - name: Upload backend coverage to Codecov
-        uses: codecov/codecov-action@v5
+      - uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: backend/coverage.xml
-          flags: backend
-          name: backend
-          fail_ci_if_error: false
+          name: backend-coverage
+          path: backend/coverage.xml
 
   frontend:
     name: Frontend tests
@@ -63,11 +63,30 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
-      - name: Upload frontend coverage to Codecov
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/lcov.info
+
+  upload-coverage:
+    name: Upload coverage
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: coverage-artifacts
+
+      - name: Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
+          use_oidc: true
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: frontend/coverage/lcov.info
-          flags: frontend
-          name: frontend
-          fail_ci_if_error: false
+          files: coverage-artifacts/backend-coverage/coverage.xml,coverage-artifacts/frontend-coverage/lcov.info
+          flags: backend,frontend
+          fail_ci_if_error: true
