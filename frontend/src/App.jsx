@@ -168,7 +168,10 @@ export default function App() {
         )}
 
         {view === "org-detail" && selectedOrg && (
-          <OrgDetailPage org={selectedOrg} onBack={() => navigate("organizations")} />
+          <OrgDetailPage
+          org={selectedOrg}
+          onBack={() => navigate("organizations")}
+          onNavigateToEvent={navigateToEvent}/>
         )}
 
         {view === "events" && (

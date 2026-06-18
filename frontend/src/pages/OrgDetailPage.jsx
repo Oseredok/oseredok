@@ -1,10 +1,36 @@
+import { useEffect, useState } from "react";
+import { API } from "../api";
 import CategoryPill from "../components/CategoryPill";
+import EventCard from "../components/cards/EventCard";
+import SkeletonCard from "../components/cards/SkeletonCard";
 import { IconArrowLeft } from "../components/ui/Icons";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
 
-export default function OrgDetailPage({ org, onBack }) {
+export default function OrgDetailPage({ org, onBack, onNavigateToEvent }) {
   const color = categoryColors[org.category] || categoryColors.default;
   const initial = org.name[0]?.toUpperCase() || "?";
+
+  const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+
+  useEffect(() => {
+    setLoadingEvents(true);
+    fetch(`${API}/events?organization_id=${org.organization_id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setEvents(data);
+        setLoadingEvents(false);
+      })
+      .catch(() => setLoadingEvents(false));
+  }, [org.organization_id]);
+
+  const now = new Date();
+  const upcomingEvents = events.filter(
+    (e) => e.start_datetime && new Date(e.start_datetime) >= now
+  );
+  const pastEvents = events.filter(
+    (e) => e.start_datetime && new Date(e.start_datetime) < now
+  );
 
   return (
     <div style={{ animation: "fadeUp 0.4s ease both" }}>
@@ -60,15 +86,15 @@ export default function OrgDetailPage({ org, onBack }) {
       </div>
 
       <div
-          className="detail-grid"
-          style={{
-            background: colors.surface,
-            borderRadius: `0 0 ${radius.xl}px ${radius.xl}px`,
-            border: `1px solid ${colors.borderLight}`,
-            borderTop: "none",
-            boxShadow: shadows.md,
-            padding: "32px",
-          }}
+        className="detail-grid"
+        style={{
+          background: colors.surface,
+          borderRadius: `0 0 ${radius.xl}px ${radius.xl}px`,
+          border: `1px solid ${colors.borderLight}`,
+          borderTop: "none",
+          boxShadow: shadows.md,
+          padding: "32px",
+        }}
       >
         <div>
           <div style={{ marginBottom: 12 }}>
@@ -122,8 +148,8 @@ export default function OrgDetailPage({ org, onBack }) {
             </h3>
 
             {org.contact_email && (
-              <a
-                href={`mailto:${org.contact_email}`}
+              
+               <a href={`mailto:${org.contact_email}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -169,6 +195,92 @@ export default function OrgDetailPage({ org, onBack }) {
             )}
           </div>
         </aside>
+      </div>
+
+      {/* Події організації */}
+      <div style={{ marginTop: 48 }}>
+        <h2
+          style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: colors.text,
+            fontFamily: fonts.heading,
+            letterSpacing: "-0.01em",
+            marginBottom: 24,
+          }}
+        >
+          Події організації
+        </h2>
+
+        {loadingEvents && (
+          <div className="cards-grid">
+            {[...Array(3)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        )}
+
+        {!loadingEvents && events.length === 0 && (
+          <p style={{ fontSize: 15, color: colors.textMuted, fontFamily: fonts.body }}>
+            Ця організація ще не створила жодної події.
+          </p>
+        )}
+
+        {!loadingEvents && upcomingEvents.length > 0 && (
+          <>
+            <h3
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: colors.textMuted,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                marginBottom: 16,
+                fontFamily: fonts.body,
+              }}
+            >
+              Майбутні
+            </h3>
+            <div className="cards-grid" style={{ marginBottom: 40 }}>
+              {upcomingEvents.map((event, i) => (
+                <EventCard
+                  key={event.event_id}
+                  event={event}
+                  idx={i}
+                  onNavigate={onNavigateToEvent}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {!loadingEvents && pastEvents.length > 0 && (
+          <>
+            <h3
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: colors.textMuted,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                marginBottom: 16,
+                fontFamily: fonts.body,
+              }}
+            >
+              Минулі
+            </h3>
+            <div className="cards-grid" style={{ opacity: 0.7 }}>
+              {pastEvents.map((event, i) => (
+                <EventCard
+                  key={event.event_id}
+                  event={event}
+                  idx={i}
+                  onNavigate={onNavigateToEvent}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
