@@ -9,6 +9,38 @@ function authHeaders() {
   };
 }
 
+function OrgLogo({ logoUrl, initials, catColor }) {
+  const [failed, setFailed] = useState(false);
+  const showImage = Boolean(logoUrl) && !failed;
+
+  return (
+    <div
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: radius.lg,
+        overflow: "hidden",
+        background: showImage ? "transparent" : colors.primaryLight,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      {showImage ? (
+        <img
+          src={logoUrl}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span style={{ fontWeight: 800, color: catColor || colors.primary }}>{initials}</span>
+      )}
+    </div>
+  );
+}
+
 export function OrganizerPanelPage({ user, onEditOrg }) {
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,25 +115,7 @@ export function OrganizerPanelPage({ user, onEditOrg }) {
                   flexWrap: "wrap",
                 }}
               >
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: radius.lg,
-                    overflow: "hidden",
-                    background: org.logo_url ? "transparent" : colors.primaryLight,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  {org.logo_url ? (
-                    <img src={org.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : (
-                    <span style={{ fontWeight: 800, color: colors.primary }}>{initials}</span>
-                  )}
-                </div>
+                <OrgLogo logoUrl={org.logo_url} initials={initials} catColor={catColor} />
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ fontWeight: 700, fontSize: 16, color: colors.text, fontFamily: fonts.heading }}>
                     {org.name}
