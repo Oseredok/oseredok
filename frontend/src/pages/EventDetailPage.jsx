@@ -9,6 +9,7 @@ import {
   IconUsers,
 } from "../components/ui/Icons";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
+import { useToast } from "../context/ToastContext";
 
 function formatDateLong(iso) {
   if (!iso) return "";
@@ -91,7 +92,7 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
   const [registered, setRegistered] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+  const showToast = useToast();
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [profile, setProfile] = useState(null);
   const [modalError, setModalError] = useState("");
@@ -129,7 +130,7 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
         setRegistered(false);
       }
     } catch {
-      setMessage("Не вдалося завантажити дані події");
+      showToast("Не вдалося завантажити дані події", "error");
     } finally {
       setLoading(false);
     }
@@ -145,7 +146,6 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
       return;
     }
     setSubmitting(true);
-    setMessage("");
     setModalError("");
     const token = localStorage.getItem("token");
     try {
@@ -156,19 +156,19 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
       if (res.ok) {
         setRegistered(true);
         setShowRegisterModal(false);
-        setMessage("Ви успішно зареєстровані на подію");
+        showToast("Ви успішно зареєстровані на подію", "success");
         const updated = await fetch(`${API}/events/${event.event_id}`).then((r) => r.json());
         setEvent(updated);
       } else {
         const data = await res.json().catch(() => ({}));
         const err = data.detail || "Не вдалося зареєструватись";
         setModalError(err);
-        setMessage(err);
+        showToast(err, "error");
       }
     } catch {
       const err = "Немає зв'язку з сервером";
       setModalError(err);
-      setMessage(err);
+      showToast(err, "error");
     } finally {
       setSubmitting(false);
     }
@@ -185,7 +185,6 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
 
   const handleCancel = async () => {
     setSubmitting(true);
-    setMessage("");
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API}/events/${event.event_id}/register`, {
@@ -194,15 +193,15 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
       });
       if (res.ok) {
         setRegistered(false);
-        setMessage("Реєстрацію скасовано");
+        showToast("Реєстрацію скасовано", "success");
         const updated = await fetch(`${API}/events/${event.event_id}`).then((r) => r.json());
         setEvent(updated);
       } else {
         const data = await res.json().catch(() => ({}));
-        setMessage(data.detail || "Не вдалося скасувати реєстрацію");
+        showToast(data.detail || "Не вдалося скасувати реєстрацію", "error");
       }
     } catch {
-      setMessage("Немає зв'язку з сервером");
+      showToast("Немає зв'язку з сервером", "error");
     } finally {
       setSubmitting(false);
     }
@@ -366,26 +365,6 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onO
             Участь безкоштовна
           </div>
         </div>
-
-        {message && (
-          <div
-            style={{
-              padding: "12px 16px",
-              borderRadius: radius.md,
-              marginBottom: 16,
-              fontSize: 13,
-              fontFamily: fonts.body,
-              background: message.includes("успіш") || message.includes("скасовано")
-                ? colors.successBg
-                : colors.errorBg,
-              color: message.includes("успіш") || message.includes("скасовано")
-                ? colors.success
-                : colors.error,
-            }}
-          >
-            {message}
-          </div>
-        )}
 
         {!user ? (
           <button

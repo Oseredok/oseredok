@@ -10,6 +10,7 @@ import {
   IconUser,
 } from "../components/ui/Icons";
 import { colors, fonts, radius, shadows } from "../theme/tokens";
+import { useToast } from "../context/ToastContext";
 
 const MONTHS = ["СІЧ", "ЛЮТ", "БЕР", "КВІТ", "ТРАВ", "ЧЕР", "ЛИП", "СЕР", "ВЕР", "ЖОВ", "ЛИС", "ГРУ"];
 
@@ -84,7 +85,7 @@ export default function ProfilePage({ user, onNavigateToEvent, onNavigate }) {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: "", faculty: "" });
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const showToast = useToast();
 
   const fetchProfile = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -104,7 +105,7 @@ export default function ProfilePage({ user, onNavigateToEvent, onNavigate }) {
         setRegistrations(await regsRes.json());
       }
     } catch {
-      setMessage("Не вдалося завантажити профіль");
+      showToast("Не вдалося завантажити профіль", "error");
     } finally {
       setLoading(false);
     }
@@ -128,7 +129,6 @@ export default function ProfilePage({ user, onNavigateToEvent, onNavigate }) {
 
   const handleSave = async () => {
     setSaving(true);
-    setMessage("");
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API}/users/me`, {
@@ -143,12 +143,12 @@ export default function ProfilePage({ user, onNavigateToEvent, onNavigate }) {
         const data = await res.json();
         setProfile(data);
         setEditing(false);
-        setMessage("Зміни збережено");
+        showToast("Зміни збережено", "success");
       } else {
-        setMessage("Не вдалося зберегти");
+        showToast("Не вдалося зберегти", "error");
       }
     } catch {
-      setMessage("Немає зв'язку з сервером");
+      showToast("Немає зв'язку з сервером", "error");
     } finally {
       setSaving(false);
     }

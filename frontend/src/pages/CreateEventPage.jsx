@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { API } from "../api";
 import { colors, fonts, radius } from "../theme/tokens";
+import { useToast } from "../context/ToastContext";
 
 export function CreateEventPage({ user, onSuccess }) {
   const [organizations, setOrganizations] = useState([]);
@@ -15,7 +16,7 @@ export function CreateEventPage({ user, onSuccess }) {
     max_participants: "",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+  const showToast = useToast();
 
   useEffect(() => {
     fetchOrganizations();
@@ -43,7 +44,6 @@ export function CreateEventPage({ user, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    setMessage("");
 
     const token = localStorage.getItem("token");
     try {
@@ -60,7 +60,7 @@ export function CreateEventPage({ user, onSuccess }) {
       });
 
       if (res.status === 201) {
-        setMessage("Подію успішно створено!");
+        showToast("Подію успішно створено!", "success");
         setFormData({
           organization_id: "",
           title: "",
@@ -74,12 +74,12 @@ export function CreateEventPage({ user, onSuccess }) {
           onSuccess?.();
         }, 1500);
       } else if (res.status === 404) {
-        setMessage("Організацію не знайдено");
+        showToast("Організацію не знайдено", "error");
       } else {
-        setMessage("Помилка при створенні події");
+        showToast("Помилка при створенні події", "error");
       }
     } catch (error) {
-      setMessage("Немає зв'язку з сервером");
+      showToast("Немає зв'язку з сервером", "error");
     } finally {
       setSubmitting(false);
     }
@@ -292,23 +292,7 @@ export function CreateEventPage({ user, onSuccess }) {
               placeholder="120"
             />
           </div>
-
-          {message && (
-            <div
-              style={{
-                padding: "12px 16px",
-                borderRadius: 10,
-                background: message.includes("успішно") ? "#f0fdf4" : "#fef2f2",
-                border: message.includes("успішно") ? "1px solid #bbf7d0" : "1px solid #fecaca",
-                color: message.includes("успішно") ? "#16a34a" : "#dc2626",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
-              {message}
-            </div>
-          )}
-
+          
           <button
             type="submit"
             disabled={submitting}

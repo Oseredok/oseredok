@@ -6,6 +6,7 @@ import OrganizationFormFields from "../components/admin/OrganizationFormFields";
 import LogoUploadField from "../components/LogoUploadField";
 import { emptyForm, fileToDataUrl } from "../utils/orgForm";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
+import { useToast } from "../context/ToastContext";
 
 function getDay(dateStr) {
   if (!dateStr) return "";
@@ -40,26 +41,21 @@ function OrgLogo({ logoUrl, initials, catColor }) {
 }
 
 export function OrgDashboardPage({ user, onNavigate }) {
+  const showToast = useToast();
   const [org, setOrg] = useState(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
-
-  // стани редагування організації
   const [isEditingOrg, setIsEditingOrg] = useState(false);
   const [form, setForm] = useState({});
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoRemoved, setLogoRemoved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [orgMsg, setOrgMsg] = useState("");
-
-  // стани редагування події
   const [editingEventId, setEditingEventId] = useState(null);
   const [eventEditForm, setEventEditForm] = useState({});
-  const [eventSaveMsg, setEventSaveMsg] = useState("");
 
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
@@ -96,15 +92,12 @@ export function OrgDashboardPage({ user, onNavigate }) {
   const handleSubmitOrg = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    setOrgMsg("");
     try {
       const payload = { ...form };
       delete payload.status;
-      if (logoFile) {
-        payload.logo_url = await fileToDataUrl(logoFile);
-      } else if (logoRemoved) {
-        payload.logo_url = null;
-      }
+      if (logoFile) payload.logo_url = await fileToDataUrl(logoFile);
+      else if (logoRemoved) payload.logo_url = null;
+
       const res = await fetch(`${API}/organizations/${org.organization_id}`, {
         method: "PATCH",
         headers: { ...headers, "Content-Type": "application/json" },
@@ -117,13 +110,14 @@ export function OrgDashboardPage({ user, onNavigate }) {
         setLogoPreview(updated.logo_url || null);
         setLogoFile(null);
         setLogoRemoved(false);
-        setOrgMsg("Зміни збережено");
+        setIsEditingOrg(false);
+        showToast("Організацію оновлено", "success");
       } else {
         const data = await res.json().catch(() => ({}));
-        setOrgMsg(data.detail || "Помилка при оновленні");
+        showToast(data.detail || "Помилка при оновленні", "error");
       }
     } catch {
-      setOrgMsg("Немає зв'язку з сервером");
+      showToast("Немає зв'язку з сервером", "error");
     } finally {
       setSubmitting(false);
     }
@@ -134,7 +128,6 @@ export function OrgDashboardPage({ user, onNavigate }) {
     setLogoPreview(org.logo_url || null);
     setLogoFile(null);
     setLogoRemoved(false);
-    setOrgMsg("");
     setIsEditingOrg(false);
   };
 
@@ -149,11 +142,10 @@ export function OrgDashboardPage({ user, onNavigate }) {
         if (updated) {
           setEvents(prev => prev.map(e => e.event_id === eventId ? { ...e, ...updated } : e));
           setEditingEventId(null);
-          setEventSaveMsg("Збережено");
-          setTimeout(() => setEventSaveMsg(""), 3000);
+          showToast("Подію збережено", "success");
         }
       })
-      .catch(() => {});
+      .catch(() => showToast("Помилка збереження події", "error"));
   };
 
   const now = new Date();
@@ -181,8 +173,6 @@ export function OrgDashboardPage({ user, onNavigate }) {
 
   return (
     <div style={{ animation: "fadeUp 0.4s ease both" }}>
-
-      {/* Заголовок */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 32, fontWeight: 800, color: colors.text, fontFamily: fonts.heading, marginBottom: 6 }}>
           Панель організатора
@@ -192,7 +182,6 @@ export function OrgDashboardPage({ user, onNavigate }) {
         </p>
       </div>
 
-      {/* Картка організації */}
       <div style={{
         background: colors.surface, borderRadius: radius.xl,
         border: `1px solid ${colors.borderLight}`, boxShadow: shadows.sm,
@@ -201,18 +190,10 @@ export function OrgDashboardPage({ user, onNavigate }) {
       }}>
         <OrgLogo logoUrl={org.logo_url} initials={initials} catColor={catColor} />
         <div style={{ flex: 1, minWidth: 180 }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: colors.text, fontFamily: fonts.heading }}>
-            {org.name}
-          </div>
-          {org.handle && (
-            <div style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>@{org.handle}</div>
-          )}
+          <div style={{ fontWeight: 700, fontSize: 16, color: colors.text, fontFamily: fonts.heading }}>{org.name}</div>
+          {org.handle && <div style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>@{org.handle}</div>}
           {org.category && (
-            <span style={{
-              display: "inline-block", marginTop: 8, padding: "3px 10px",
-              borderRadius: radius.pill, fontSize: 11, fontWeight: 700,
-              background: catColor + "18", color: catColor,
-            }}>
+            <span style={{ display: "inline-block", marginTop: 8, padding: "3px 10px", borderRadius: radius.pill, fontSize: 11, fontWeight: 700, background: catColor + "18", color: catColor }}>
               {org.category}
             </span>
           )}
@@ -222,96 +203,47 @@ export function OrgDashboardPage({ user, onNavigate }) {
           onClick={() => setIsEditingOrg(prev => !prev)}
           style={{
             display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "10px 18px", borderRadius: radius.md, fontSize: 14,
-            fontWeight: 700, border: "none",
+            padding: "10px 18px", borderRadius: radius.md, fontSize: 14, fontWeight: 700, border: "none",
             background: isEditingOrg ? colors.borderLight : colors.primary,
             color: isEditingOrg ? colors.textSecondary : colors.white,
             cursor: "pointer", fontFamily: fonts.body,
           }}
         >
-          {isEditingOrg ? (
-            <>
-              <IconX size={14} color={colors.textSecondary} />
-              Закрити
-            </>
-          ) : (
-            <>
-              <IconEdit size={14} color={colors.white} />
-              Редагувати
-            </>
-          )}
+          {isEditingOrg ? <><IconX size={14} color={colors.textSecondary} />Закрити</> : <><IconEdit size={14} color={colors.white} />Редагувати</>}
         </button>
       </div>
 
-      {/* Форма редагування організації — з'являється одразу під карткою */}
       {isEditingOrg && (
         <div style={{
           background: colors.surface, borderRadius: radius.xl,
           border: `1px solid ${colors.borderLight}`, boxShadow: shadows.sm,
-          padding: 20, marginBottom: 24,
-          animation: "fadeUp 0.25s ease both",
+          padding: 20, marginBottom: 24, animation: "fadeUp 0.25s ease both",
         }}>
           <form onSubmit={handleSubmitOrg}>
             <LogoUploadField
               preview={logoPreview}
               fileName={logoFile?.name}
-              onChange={(file) => {
-                setLogoFile(file);
-                setLogoPreview(URL.createObjectURL(file));
-                setLogoRemoved(false);
-              }}
-              onRemove={() => {
-                setLogoFile(null);
-                setLogoPreview(null);
-                setLogoRemoved(true);
-              }}
+              onChange={(file) => { setLogoFile(file); setLogoPreview(URL.createObjectURL(file)); setLogoRemoved(false); }}
+              onRemove={() => { setLogoFile(null); setLogoPreview(null); setLogoRemoved(true); }}
               label="Аватар / лого організації"
             />
-
-            <OrganizationFormFields
-              form={form}
-              setForm={setForm}
-              showStatus={false}
-            />
-
-            {orgMsg && (
-              <div style={{
-                padding: "12px 16px", borderRadius: radius.md, marginBottom: 20,
-                background: orgMsg.includes("збережено") ? colors.successBg : colors.errorBg,
-                color: orgMsg.includes("збережено") ? colors.success : colors.error,
-                fontSize: 13, fontFamily: fonts.body,
-              }}>
-                {orgMsg}
-              </div>
-            )}
-
+            <OrganizationFormFields form={form} setForm={setForm} showStatus={false} />
             <div style={{ display: "flex", gap: 12 }}>
-              <button
-                type="submit"
-                disabled={submitting}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  padding: "12px 24px", borderRadius: radius.md, fontSize: 14,
-                  fontWeight: 700, border: "none",
-                  background: submitting ? colors.borderLight : colors.primary,
-                  color: submitting ? colors.textMuted : colors.white,
-                  cursor: submitting ? "not-allowed" : "pointer",
-                  fontFamily: fonts.body,
-                }}
-              >
+              <button type="submit" disabled={submitting} style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "12px 24px", borderRadius: radius.md, fontSize: 14, fontWeight: 700, border: "none",
+                background: submitting ? colors.borderLight : colors.primary,
+                color: submitting ? colors.textMuted : colors.white,
+                cursor: submitting ? "not-allowed" : "pointer", fontFamily: fonts.body,
+              }}>
                 <IconCheck size={16} color={submitting ? colors.textMuted : colors.white} />
                 {submitting ? "Збереження..." : "Зберегти зміни"}
               </button>
-              <button
-                type="button"
-                onClick={handleCancelEditOrg}
-                style={{
-                  padding: "12px 24px", borderRadius: radius.md, fontSize: 14,
-                  fontWeight: 700, border: `1px solid ${colors.border}`,
-                  background: "none", color: colors.textSecondary,
-                  cursor: "pointer", fontFamily: fonts.body,
-                }}
-              >
+              <button type="button" onClick={handleCancelEditOrg} style={{
+                padding: "12px 24px", borderRadius: radius.md, fontSize: 14, fontWeight: 700,
+                border: `1px solid ${colors.border}`, background: "none", color: colors.textSecondary,
+                cursor: "pointer", fontFamily: fonts.body,
+              }}>
                 Скасувати
               </button>
             </div>
@@ -319,39 +251,23 @@ export function OrgDashboardPage({ user, onNavigate }) {
         </div>
       )}
 
-      {/* Секція подій */}
       <div style={{
         background: colors.surface, borderRadius: radius.xl,
         border: `1px solid ${colors.borderLight}`, boxShadow: shadows.sm,
         overflow: "hidden", marginBottom: 24,
       }}>
-        <div style={{
-          padding: "16px 20px", borderBottom: `1px solid ${colors.borderLight}`,
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-        }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${colors.borderLight}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 16, color: colors.text, fontFamily: fonts.heading }}>Події</div>
-            <div style={{ fontSize: 13, color: colors.textMuted, marginTop: 2, fontFamily: fonts.body }}>
-              {events.length} подій загалом
-            </div>
+            <div style={{ fontSize: 13, color: colors.textMuted, marginTop: 2, fontFamily: fonts.body }}>{events.length} подій загалом</div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {eventSaveMsg && (
-              <span style={{ fontSize: 13, color: "#16a34a", fontFamily: fonts.body }}>✓ {eventSaveMsg}</span>
-            )}
-            <button
-              type="button"
-              onClick={() => onNavigate("create-event")}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "10px 18px", borderRadius: radius.md, fontSize: 14,
-                fontWeight: 700, border: "none", background: colors.primary,
-                color: colors.white, cursor: "pointer", fontFamily: fonts.body,
-              }}
-            >
-              + Нова подія
-            </button>
-          </div>
+          <button type="button" onClick={() => onNavigate("create-event")} style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "10px 18px", borderRadius: radius.md, fontSize: 14, fontWeight: 700,
+            border: "none", background: colors.primary, color: colors.white, cursor: "pointer", fontFamily: fonts.body,
+          }}>
+            + Нова подія
+          </button>
         </div>
 
         <div style={{ padding: "8px 20px 20px" }}>
@@ -378,13 +294,7 @@ export function OrgDashboardPage({ user, onNavigate }) {
                   onStartEdit={() => {
                     setEditingEventId(event.event_id);
                     setSelectedEventId(null);
-                    setEventEditForm({
-                      title: event.title || "",
-                      description: event.description || "",
-                      location: event.location || "",
-                      start_datetime: event.start_datetime?.slice(0, 16) || "",
-                      max_participants: event.max_participants || "",
-                    });
+                    setEventEditForm({ title: event.title || "", description: event.description || "", location: event.location || "", start_datetime: event.start_datetime?.slice(0, 16) || "", max_participants: event.max_participants || "" });
                   }}
                   onCancelEdit={() => setEditingEventId(null)}
                   onSaveEdit={() => handleSaveEvent(event.event_id)}
@@ -410,13 +320,7 @@ export function OrgDashboardPage({ user, onNavigate }) {
                   onStartEdit={() => {
                     setEditingEventId(event.event_id);
                     setSelectedEventId(null);
-                    setEventEditForm({
-                      title: event.title || "",
-                      description: event.description || "",
-                      location: event.location || "",
-                      start_datetime: event.start_datetime?.slice(0, 16) || "",
-                      max_participants: event.max_participants || "",
-                    });
+                    setEventEditForm({ title: event.title || "", description: event.description || "", location: event.location || "", start_datetime: event.start_datetime?.slice(0, 16) || "", max_participants: event.max_participants || "" });
                   }}
                   onCancelEdit={() => setEditingEventId(null)}
                   onSaveEdit={() => handleSaveEvent(event.event_id)}
@@ -435,19 +339,10 @@ function EventRow({ event, isSelected, participants, loadingParticipants, onTogg
   return (
     <div style={{ borderBottom: `1px solid ${colors.borderLight}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0" }}>
-        <div style={{
-          width: 44, flexShrink: 0, textAlign: "center",
-          background: isPast ? colors.borderLight : "#eff6ff",
-          borderRadius: radius.md, padding: "6px 4px",
-        }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: isPast ? colors.textMuted : colors.primary, lineHeight: 1 }}>
-            {getDay(event.start_datetime)}
-          </div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: isPast ? colors.textMuted : "#93c5fd", textTransform: "uppercase" }}>
-            {getMonthAbbr(event.start_datetime)}
-          </div>
+        <div style={{ width: 44, flexShrink: 0, textAlign: "center", background: isPast ? colors.borderLight : "#eff6ff", borderRadius: radius.md, padding: "6px 4px" }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: isPast ? colors.textMuted : colors.primary, lineHeight: 1 }}>{getDay(event.start_datetime)}</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: isPast ? colors.textMuted : "#93c5fd", textTransform: "uppercase" }}>{getMonthAbbr(event.start_datetime)}</div>
         </div>
-
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontWeight: 700, fontSize: 14, color: isPast ? colors.textSecondary : colors.text, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: fonts.body }}>
             {event.title}
@@ -458,7 +353,6 @@ function EventRow({ event, isSelected, participants, loadingParticipants, onTogg
             <span style={{ fontSize: 12, color: colors.textMuted, fontFamily: fonts.body }}>{event.participants_count ?? 0} учасників</span>
           </div>
         </div>
-
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <button type="button" onClick={onStartEdit} style={{
             display: "inline-flex", alignItems: "center", gap: 6,
@@ -511,12 +405,8 @@ function EventRow({ event, isSelected, participants, loadingParticipants, onTogg
                 style={{ width: "100%", padding: "8px 12px", borderRadius: radius.md, fontSize: 14, border: `1.5px solid ${colors.border}`, outline: "none", fontFamily: fonts.body, resize: "vertical", boxSizing: "border-box" }} />
             </div>
             <div style={{ display: "flex", gap: 10 }}>
-              <button type="button" onClick={onSaveEdit} style={{ padding: "9px 20px", borderRadius: radius.md, fontSize: 13, fontWeight: 700, border: "none", background: colors.primary, color: colors.white, cursor: "pointer", fontFamily: fonts.body }}>
-                Зберегти
-              </button>
-              <button type="button" onClick={onCancelEdit} style={{ padding: "9px 20px", borderRadius: radius.md, fontSize: 13, fontWeight: 600, border: `1px solid ${colors.border}`, background: "none", color: colors.textSecondary, cursor: "pointer", fontFamily: fonts.body }}>
-                Скасувати
-              </button>
+              <button type="button" onClick={onSaveEdit} style={{ padding: "9px 20px", borderRadius: radius.md, fontSize: 13, fontWeight: 700, border: "none", background: colors.primary, color: colors.white, cursor: "pointer", fontFamily: fonts.body }}>Зберегти</button>
+              <button type="button" onClick={onCancelEdit} style={{ padding: "9px 20px", borderRadius: radius.md, fontSize: 13, fontWeight: 600, border: `1px solid ${colors.border}`, background: "none", color: colors.textSecondary, cursor: "pointer", fontFamily: fonts.body }}>Скасувати</button>
             </div>
           </div>
         </div>
@@ -525,9 +415,7 @@ function EventRow({ event, isSelected, participants, loadingParticipants, onTogg
       {isSelected && !isEditing && (
         <div style={{ padding: "0 0 16px 58px" }}>
           {loadingParticipants && <p style={{ fontSize: 13, color: colors.textMuted, fontFamily: fonts.body }}>Завантаження...</p>}
-          {!loadingParticipants && participants.length === 0 && (
-            <p style={{ fontSize: 13, color: colors.textMuted, fontFamily: fonts.body }}>Немає зареєстрованих учасників</p>
-          )}
+          {!loadingParticipants && participants.length === 0 && <p style={{ fontSize: 13, color: colors.textMuted, fontFamily: fonts.body }}>Немає зареєстрованих учасників</p>}
           {!loadingParticipants && participants.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {participants.map((p, i) => (

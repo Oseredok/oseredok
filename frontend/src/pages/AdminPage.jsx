@@ -9,6 +9,7 @@ import {
 } from "../components/admin/AdminIcons";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
 import AdminUsersPage from "./AdminUsersPage";
+import { useToast } from "../context/ToastContext";
 
 function authHeaders() {
   return {
@@ -44,9 +45,9 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("Всі");
   const [filterStatus, setFilterStatus] = useState("Всі");
-  const [message, setMessage] = useState("");
 
-  const [usersRef, setUsersRef] = useState(null); // 🔥 FIX
+  const showToast = useToast();
+  const [usersRef, setUsersRef] = useState(null); 
 
   const fetchOrganizations = useCallback(async () => {
     setLoading(true);
@@ -55,7 +56,7 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
       const data = await res.json();
       setOrganizations(data);
     } catch {
-      setMessage("Не вдалося завантажити організації");
+      showToast("Не вдалося завантажити організації", "error");
     } finally {
       setLoading(false);
     }
@@ -109,7 +110,7 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
 
       if (res.ok) fetchOrganizations();
     } catch {
-      setMessage("Помилка зміни статусу");
+      showToast("Помилка зміни статусу", "error");
     }
   };
 
@@ -124,7 +125,7 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
 
       if (res.ok) fetchOrganizations();
     } catch {
-      setMessage("Немає зв'язку з сервером");
+      showToast("Немає зв'язку з сервером", "error");
     }
   };
 
@@ -396,22 +397,6 @@ if (activeTab === "users") {
           <option value="inactive">Неактивні</option>
         </select>
       </div>
-
-      {/* Error message */}
-      {message && (
-        <div
-          style={{
-            padding: "12px 16px",
-            borderRadius: radius.md,
-            background: colors.errorBg,
-            color: colors.error,
-            fontSize: 13,
-            marginBottom: 16,
-          }}
-        >
-          {message}
-        </div>
-      )}
 
       {/* Table */}
       <div

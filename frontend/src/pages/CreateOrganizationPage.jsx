@@ -7,6 +7,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { fileToDataUrl } from "../utils/orgForm";
 import { roleLabel } from "../utils/roles";
 import { colors, fonts, radius } from "../theme/tokens";
+import { useToast } from "../context/ToastContext";
 
 const EMPTY_FORM = {
   name: "",
@@ -34,7 +35,7 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+  const showToast = useToast();
   const [ownerResults, setOwnerResults] = useState([]);
   const debouncedOwnerSearch = useDebounce(ownerSearch, 300);
 
@@ -54,11 +55,10 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedOwner) {
-      setMessage("Оберіть власника організації");
+      showToast("Оберіть власника організації", "error");
       return;
     }
     setSubmitting(true);
-    setMessage("");
     try {
       const payload = { ...form, owner_id: selectedOwner.user_id };
       if (logoFile) payload.logo_url = await fileToDataUrl(logoFile);
@@ -70,12 +70,13 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
       });
       if (res.status === 201) {
         onSuccess?.();
+        showToast("Організацію успішно створено!", "success");
       } else {
         const data = await res.json().catch(() => ({}));
-        setMessage(data.detail || "Помилка при створенні");
+        showToast(data.detail || "Помилка при створенні", "error");
       }
     } catch {
-      setMessage("Немає зв'язку з сервером");
+      showToast("Немає зв'язку з сервером", "error");
     } finally {
       setSubmitting(false);
     }
@@ -183,21 +184,6 @@ export function CreateOrganizationPage({ onCancel, onSuccess }) {
                 </div>
               </button>
             ))}
-          </div>
-        )}
-
-        {message && (
-          <div
-            style={{
-              padding: "12px 16px",
-              borderRadius: radius.md,
-              background: message.includes("успіш") ? colors.successBg : colors.errorBg,
-              color: message.includes("успіш") ? colors.success : colors.error,
-              fontSize: 13,
-              marginBottom: 20,
-            }}
-          >
-            {message}
           </div>
         )}
 

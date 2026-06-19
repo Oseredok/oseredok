@@ -12,6 +12,7 @@ import {
 import { IconArrowLeft, IconX } from "../components/ui/Icons";
 import { emptyForm, fileToDataUrl } from "../utils/orgForm";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
+import { useToast } from "../context/ToastContext";
 
 function authHeaders() {
   return {
@@ -46,6 +47,7 @@ export function AdminOrgEditPage({
   onCreateEvent,
   onNavigateToEvent,
 }) {
+  const showToast = useToast();
   const [form, setForm] = useState(emptyForm(initialOrg));
   const [events, setEvents] = useState([]);
   const [logoFile, setLogoFile] = useState(null);
@@ -53,7 +55,6 @@ export function AdminOrgEditPage({
   const [logoRemoved, setLogoRemoved] = useState(false);
   const [loadingOrg, setLoadingOrg] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
 
   // стани редагування події
   const [editingEventId, setEditingEventId] = useState(null);
@@ -74,7 +75,7 @@ export function AdminOrgEditPage({
         setLogoFile(null);
       }
     } catch {
-      setMessage("Не вдалося завантажити організацію");
+      showToast("Не вдалося завантажити організацію", "error");
     } finally {
       setLoadingOrg(false);
     }
@@ -110,7 +111,6 @@ export function AdminOrgEditPage({
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    setMessage("");
 
     try {
       const payload = { ...form };
@@ -138,13 +138,13 @@ export function AdminOrgEditPage({
         setLogoPreview(updated.logo_url || null);
         setLogoFile(null);
         setLogoRemoved(false);
-        setMessage("Зміни збережено");
+        showToast("Зміни збережено", "success");
       } else {
         const data = await res.json().catch(() => ({}));
-        setMessage(data.detail || "Помилка при оновленні");
+        showToast(data.detail || "Помилка при оновленні", "error");
       }
     } catch {
-      setMessage("Немає зв'язку з сервером");
+      showToast("Немає зв'язку з сервером", "error");
     } finally {
       setSubmitting(false);
     }
@@ -152,7 +152,7 @@ export function AdminOrgEditPage({
 
   const handleDeleteEvent = async (event) => {
     if (!window.confirm(`Видалити подію «${event.title}»?`)) return;
-    setMessage("Видалення подій поки не підтримується API");
+    showToast("Видалення подій поки не підтримується API", "error");
   };
 
   const handleSaveEvent = async (eventId) => {
@@ -574,21 +574,6 @@ export function AdminOrgEditPage({
           />
 
           <OrganizationFormFields form={form} setForm={setForm} showStatus={isAdminMode} />
-
-          {message && (
-            <div
-              style={{
-                padding: "12px 16px",
-                borderRadius: radius.md,
-                background: message.includes("збережено") ? colors.successBg : colors.errorBg,
-                color: message.includes("збережено") ? colors.success : colors.error,
-                fontSize: 13,
-                marginBottom: 20,
-              }}
-            >
-              {message}
-            </div>
-          )}
 
           <div style={{ display: "flex", gap: 12 }}>
             <button
