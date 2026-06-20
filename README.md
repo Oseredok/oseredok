@@ -15,7 +15,6 @@
 - Backend: Python + FastAPI
 - БД: MySQL
 
-
 ## Лінк на Kanban - дошку : 
 - https://sharing.clickup.com/90151427240/b/h/6-901523495375-2/cdd9136ae826d64
 
