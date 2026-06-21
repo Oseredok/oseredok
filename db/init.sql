@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS organization_members (
 
 -- Test users (password for all: password123)
 INSERT INTO users (user_id, full_name, email, password_hash, role, faculty, created_at) VALUES
-('u0000001-0000-4000-8000-000000000001', 'Адміністратор', 'admin@naukma.edu.ua', '$2b$12$Uikl8mEf2aQ72Myrs06m1eO8VX8JucidNS6DjTrhd9EtIzDDUniyy', 'admin', NULL, '2023-09-01 10:00:00'),
+('u0000001-0000-4000-8000-000000000001', 'Адміністратор', 'admin@ukma.edu.ua', '$2b$12$Uikl8mEf2aQ72Myrs06m1eO8VX8JucidNS6DjTrhd9EtIzDDUniyy', 'admin', NULL, '2023-09-01 10:00:00'),
 ('u0000002-0000-4000-8000-000000000002', 'Олексій Литвин', 'o.lytvyn@ukma.edu.ua', '$2b$12$Uikl8mEf2aQ72Myrs06m1eO8VX8JucidNS6DjTrhd9EtIzDDUniyy', 'org_owner', 'Факультет інформатики', '2022-09-15 10:00:00'),
 ('u0000003-0000-4000-8000-000000000003', 'Марія Коваль', 'm.koval@ukma.edu.ua', '$2b$12$Uikl8mEf2aQ72Myrs06m1eO8VX8JucidNS6DjTrhd9EtIzDDUniyy', 'org_owner', 'Гуманітарні науки', '2024-10-20 10:00:00'),
 ('u0000004-0000-4000-8000-000000000004', 'Дмитро Шевченко', 'd.shevchenko@ukma.edu.ua', '$2b$12$Uikl8mEf2aQ72Myrs06m1eO8VX8JucidNS6DjTrhd9EtIzDDUniyy', 'org_owner', 'Природничі науки', '2025-05-28 10:00:00'),
