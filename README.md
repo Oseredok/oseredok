@@ -87,7 +87,7 @@ mysql -u root < db/init.sql
 ```
 
 
-Щоб перезалити базу з нуля в майбутньому! (видалить усі дані і поверне тестовий набір): НЕ РОБІТЬ ЦЕ ЗАРАЗ бо все працюватиме 
+Щоб перезалити базу з нуля в майбутньому! (видалить усі дані і поверне тестовий набір): НЕ РОБІТЬ ЦЕ ЗАРАЗ бо все працюватиме і так, всі необхідні кроки вже виконано
 
 ```bash
 ./db/reload.sh
@@ -103,7 +103,7 @@ mysql -u root student_orgs -e "SELECT COUNT(*) AS organizations FROM organizatio
 
 | Email | Роль |
 |---|---|
-| `admin@naukma.edu.ua` | admin | password123
+| `admin@ukma.edu.ua` | admin | password123
 | `o.lytvyn@ukma.edu.ua` | org_owner | password123
 | `mykhailo@ukma.edu.ua` | student | password123
 
