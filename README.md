@@ -55,24 +55,96 @@ https://teams.microsoft.com/l/channel/19%3A8-ORD-ZbJA6oaPOudXHKJEjqDUr1jy3tV1lfs
 
 ```
 Осередок/
-├── backend/          # FastAPI сервер
-│   ├── main.py       # Роути API
-│   ├── models.py     # SQLAlchemy моделі
-│   ├── schemas.py    # Pydantic схеми
-│   ├── database.py   # Підключення до БД
-│   ├── roles.py       # Логіка ролей і прав доступу
-│   └── requirements.txt
-├── frontend/         # React + Vite застосунок
+├── .github/                    # Налаштування GitHub (CI/CD, workflows)
+├── backend/                    # FastAPI сервер
+│   ├── tests/                  # Автотести бекенду
+│   │   ├── conftest.py         
+│   │   ├── test_helpers.py     
+│   │   ├── test_main.py        
+│   │   ├── test_roles.py       
+│   │   └── test_schemas.py     
+│   ├── .coveragerc             # Налаштування звіту покриття тестами
+│   ├── database.py             # Підключення до БД
+│   ├── main.py                 # Роути API
+│   ├── models.py               # SQLAlchemy моделі таблиць
+│   ├── pytest.ini              # Налаштування pytest
+│   ├── requirements.txt        # Python-залежності
+│   ├── roles.py                # Логіка ролей і прав доступу
+│   └── schemas.py              # Pydantic схеми запитів/відповідей
+├── frontend/                   # React + Vite застосунок
 │   ├── src/
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── package.json
-│   └── vite.config.js
+│   │   ├── assets/             # Статичні ресурси (зображення, іконки)
+│   │   ├── components/         # Перевикористовувані UI-компоненти
+│   │   │   ├── admin/          # Компоненти адмін-панелі
+│   │   │   │   ├── AdminIcons.jsx
+│   │   │   │   └── OrganizationFormFields.jsx
+│   │   │   ├── cards/          # Картки для відображення сутностей
+│   │   │   │   ├── EventCard.jsx
+│   │   │   │   ├── OrgCard.jsx
+│   │   │   │   └── SkeletonCard.jsx 
+│   │   │   ├── ui/             # Базові UI-примітиви
+│   │   │   ├── CategoryPill.jsx         
+│   │   │   ├── EventRegistrationModal.jsx 
+│   │   │   ├── Field.jsx                 
+│   │   │   ├── FilterDropdown.jsx        
+│   │   │   ├── LogoUploadField.jsx       
+│   │   │   ├── Modal.jsx                
+│   │   │   ├── Navbar.jsx               
+│   │   │   └── SearchField.jsx          
+│   │   ├── context/
+│   │   │   └── ToastContext.jsx   # Глобальний контекст toast-сповіщень
+│   │   ├── data/
+│   │   │   └── mockEvents.js      # Тимчасові моковані дані подій
+│   │   ├── hooks/                 # Кастомні React-хуки
+│   │   │   ├── useCount.js
+│   │   │   └── useDebounce.js     
+│   │   ├── pages/                 # Сторінки застосунку
+│   │   │   ├── AdminOrgEditPage.jsx      
+│   │   │   ├── AdminPage.jsx            
+│   │   │   ├── AdminUsersPage.jsx       
+│   │   │   ├── CreateEventPage.jsx       
+│   │   │   ├── CreateOrganizationPage.jsx 
+│   │   │   ├── EventDetailPage.jsx      
+│   │   │   ├── EventsPage.jsx            
+│   │   │   ├── HomePage.jsx              
+│   │   │   ├── OrganizationsPage.jsx     
+│   │   │   ├── OrganizerPanelPage.jsx    
+│   │   │   ├── OrgDashboardPage.jsx      
+│   │   │   ├── OrgDetailPage.jsx         
+│   │   │   └── ProfilePage.jsx           
+│   │   ├── styles/
+│   │   │   └── global.css         # Глобальні стилі
+│   │   ├── theme/
+│   │   │   └── tokens.js          # Дизайн-токени (кольори, відступи тощо)
+│   │   ├── utils/                 # Утиліти та допоміжні функції
+│   │   │   ├── orgForm.js         
+│   │   │   ├── orgForm.test.js    
+│   │   │   ├── roles.js           
+│   │   │   └── roles.test.js     
+│   │   ├── api.js                 # Функції для запитів до бекенду
+│   │   ├── App.css
+│   │   ├── App.jsx                # Кореневий компонент, маршрутизація
+│   │   ├── index.css
+│   │   └── main.jsx               # Точка входу React-застосунку
+│   ├── .gitignore
+│   ├── eslint.config.js           # Налаштування ESLint
+│   ├── index.html                 # HTML-шаблон (точка входу Vite)
+│   ├── package-lock.json
+│   ├── package.json               # Node.js залежності та скрипти
+│   ├── README.md
+│   └── vite.config.js             # Налаштування Vite
 ├── db/
-│   ├── init.sql       # SQL-скрипт ініціалізації БД (основний спосіб засіяти дані)
-│   ├── migrations/    # інкрементальні міграції, накатуються автоматично при старті бекенду
-│   └── reload.sh      # перезаливає БД з нуля з init.sql
-└── .env.example       # шаблон змінних середовища (копіювати в backend/.env)
+│   ├── migrations/                # Інкрементальні міграції БД (накатуються автоматично при старті бекенду)
+│   │   ├── 001_extend_schema.sql
+│   │   ├── 002_add_faculty_to_users.sql
+│   │   └── 003_logo_url_mediumtext.sql
+│   ├── init.sql                   # SQL-скрипт ініціалізації БД (основний спосіб засіяти дані)
+│   └── reload.sh                  # Перезаливає БД з нуля з init.sql
+├── .env.example                   # Шаблон змінних середовища (копіювати в backend/.env)
+├── .gitignore
+├── codecov.yml                    # Налаштування Codecov (звіт покриття тестами)
+├── Oseredok_Postman_Collection.json # Колекція Postman для тестування API
+└── README.md                      # Документація проєкту
 ```
 
 ---
