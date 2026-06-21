@@ -52,7 +52,7 @@ https://teams.microsoft.com/l/channel/19%3A8-ORD-ZbJA6oaPOudXHKJEjqDUr1jy3tV1lfs
 
  
 ##  Структура проєкту
- 
+
 ```
 Осередок/
 ├── backend/          # FastAPI сервер
@@ -60,8 +60,8 @@ https://teams.microsoft.com/l/channel/19%3A8-ORD-ZbJA6oaPOudXHKJEjqDUr1jy3tV1lfs
 │   ├── models.py     # SQLAlchemy моделі
 │   ├── schemas.py    # Pydantic схеми
 │   ├── database.py   # Підключення до БД
-│   ├── requirements.txt
-│   └── .env.example
+│   ├── roles.py       # Логіка ролей і прав доступу
+│   └── requirements.txt
 ├── frontend/         # React + Vite застосунок
 │   ├── src/
 │   │   ├── App.jsx
@@ -69,10 +69,12 @@ https://teams.microsoft.com/l/channel/19%3A8-ORD-ZbJA6oaPOudXHKJEjqDUr1jy3tV1lfs
 │   ├── package.json
 │   └── vite.config.js
 ├── db/
-│   └── init.sql      # SQL-скрипт ініціалізації БД
-└── requirements.txt  # Повний список залежностей
+│   ├── init.sql       # SQL-скрипт ініціалізації БД (основний спосіб засіяти дані)
+│   ├── migrations/    # інкрементальні міграції, накатуються автоматично при старті бекенду
+│   └── reload.sh      # перезаливає БД з нуля з init.sql
+└── .env.example       # шаблон змінних середовища (копіювати в backend/.env)
 ```
- 
+
 ---
  
 ##  Вимоги
