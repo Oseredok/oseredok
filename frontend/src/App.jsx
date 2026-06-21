@@ -16,8 +16,10 @@ import ProfilePage from "./pages/ProfilePage";
 import { OrgDashboardPage } from "./pages/OrgDashboardPage";
 import { canCreateEvent, isAdmin, isOrganizer } from "./utils/roles";
 import { layout } from "./theme/tokens";
+import { ToastProvider, useToast } from "./context/ToastContext";
 
-export default function App() {
+function AppInner() {
+  const showToast = useToast();
   const [page, setPage] = useState(null);
   const [user, setUser] = useState(() => {
     const token = localStorage.getItem("token");
@@ -61,6 +63,7 @@ export default function App() {
     localStorage.removeItem("email");
     setUser(null);
     setView("home");
+    showToast("Ви вийшли з акаунту", "info");
   };
 
   const handleSuccess = (userData) => {
@@ -117,7 +120,7 @@ export default function App() {
       setView("organizer-edit-org");
     } else if (target === "create-event") {
       setView("create-event");
-    } else if (target === "org-dashboard") {   // ✅ додано
+    } else if (target === "org-dashboard") {
       setView("org-dashboard");
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -168,7 +171,11 @@ export default function App() {
         )}
 
         {view === "org-detail" && selectedOrg && (
-          <OrgDetailPage org={selectedOrg} onBack={() => navigate("organizations")} />
+          <OrgDetailPage
+            org={selectedOrg}
+            onBack={() => navigate("organizations")}
+            onNavigateToEvent={navigateToEvent}
+          />
         )}
 
         {view === "events" && (
@@ -237,7 +244,6 @@ export default function App() {
           <CreateEventPage user={user} onSuccess={() => navigate("events")} />
         )}
 
-        {/*  Панель організатора */}
         {view === "org-dashboard" && user?.role === "org_owner" && (
           <OrgDashboardPage
             user={user}
@@ -256,5 +262,13 @@ export default function App() {
         />
       )}
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppInner />
+    </ToastProvider>
   );
 }

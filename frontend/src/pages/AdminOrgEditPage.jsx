@@ -12,6 +12,7 @@ import {
 import { IconArrowLeft, IconX } from "../components/ui/Icons";
 import { emptyForm, fileToDataUrl } from "../utils/orgForm";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
+import { useToast } from "../context/ToastContext";
 
 function authHeaders() {
   return {
@@ -46,6 +47,7 @@ export function AdminOrgEditPage({
   onCreateEvent,
   onNavigateToEvent,
 }) {
+  const showToast = useToast();
   const [form, setForm] = useState(emptyForm(initialOrg));
   const [events, setEvents] = useState([]);
   const [logoFile, setLogoFile] = useState(null);
@@ -53,7 +55,11 @@ export function AdminOrgEditPage({
   const [logoRemoved, setLogoRemoved] = useState(false);
   const [loadingOrg, setLoadingOrg] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+
+  // стани редагування події
+  const [editingEventId, setEditingEventId] = useState(null);
+  const [eventEditForm, setEventEditForm] = useState({});
+  const [eventSaveMsg, setEventSaveMsg] = useState("");
 
   const orgId = initialOrg.organization_id;
 
@@ -69,7 +75,7 @@ export function AdminOrgEditPage({
         setLogoFile(null);
       }
     } catch {
-      setMessage("Не вдалося завантажити організацію");
+      showToast("Не вдалося завантажити організацію", "error");
     } finally {
       setLoadingOrg(false);
     }
@@ -105,7 +111,6 @@ export function AdminOrgEditPage({
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    setMessage("");
 
     try {
       const payload = { ...form };
@@ -133,13 +138,13 @@ export function AdminOrgEditPage({
         setLogoPreview(updated.logo_url || null);
         setLogoFile(null);
         setLogoRemoved(false);
-        setMessage("Зміни збережено");
+        showToast("Зміни збережено", "success");
       } else {
         const data = await res.json().catch(() => ({}));
-        setMessage(data.detail || "Помилка при оновленні");
+        showToast(data.detail || "Помилка при оновленні", "error");
       }
     } catch {
-      setMessage("Немає зв'язку з сервером");
+      showToast("Немає зв'язку з сервером", "error");
     } finally {
       setSubmitting(false);
     }
@@ -147,7 +152,29 @@ export function AdminOrgEditPage({
 
   const handleDeleteEvent = async (event) => {
     if (!window.confirm(`Видалити подію «${event.title}»?`)) return;
-    setMessage("Видалення подій поки не підтримується API");
+    showToast("Видалення подій поки не підтримується API", "error");
+  };
+
+  const handleSaveEvent = async (eventId) => {
+    try {
+      const res = await fetch(`${API}/events/${eventId}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify(eventEditForm),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setEvents((prev) =>
+          prev.map((e) => (e.event_id === eventId ? { ...e, ...updated } : e))
+        );
+        setEditingEventId(null);
+        setEventSaveMsg("Збережено");
+        setTimeout(() => setEventSaveMsg(""), 3000);
+      }
+    } catch {
+      setEventSaveMsg("Помилка збереження");
+      setTimeout(() => setEventSaveMsg(""), 3000);
+    }
   };
 
   const active = (form.status || "active") === "active";
@@ -303,6 +330,7 @@ export function AdminOrgEditPage({
         </div>
       </div>
 
+      {/* Події організації */}
       <div
         style={{
           background: colors.surface,
@@ -324,27 +352,32 @@ export function AdminOrgEditPage({
           <h2 style={{ fontSize: 16, fontWeight: 700, fontFamily: fonts.heading, color: colors.text, margin: 0 }}>
             Події організації
           </h2>
-          <button
-            type="button"
-            onClick={() => onCreateEvent?.({ ...initialOrg, ...form, organization_id: orgId })}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 14px",
-              borderRadius: radius.md,
-              fontSize: 13,
-              fontWeight: 600,
-              border: `1px solid ${colors.primaryMuted}`,
-              background: colors.primaryLight,
-              color: colors.primary,
-              cursor: "pointer",
-              fontFamily: fonts.body,
-            }}
-          >
-            <IconPlus size={14} color={colors.primary} />
-            Нова подія
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {eventSaveMsg && (
+              <span style={{ fontSize: 13, color: "#16a34a", fontFamily: fonts.body }}>✓ {eventSaveMsg}</span>
+            )}
+            <button
+              type="button"
+              onClick={() => onCreateEvent?.({ ...initialOrg, ...form, organization_id: orgId })}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                borderRadius: radius.md,
+                fontSize: 13,
+                fontWeight: 600,
+                border: `1px solid ${colors.primaryMuted}`,
+                background: colors.primaryLight,
+                color: colors.primary,
+                cursor: "pointer",
+                fontFamily: fonts.body,
+              }}
+            >
+              <IconPlus size={14} color={colors.primary} />
+              Нова подія
+            </button>
+          </div>
         </div>
 
         {events.length === 0 ? (
@@ -355,61 +388,162 @@ export function AdminOrgEditPage({
           events.map((event) => {
             const { day, month } = formatEventDate(event.start_datetime);
             const status = eventStatusLabel(event);
+            const isEditing = editingEventId === event.event_id;
+
             return (
-              <div
-                key={event.event_id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  padding: "16px 24px",
-                  borderBottom: `1px solid ${colors.borderLight}`,
-                }}
-              >
-                <div style={{ textAlign: "center", minWidth: 48 }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: colors.text, lineHeight: 1 }}>{day}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: colors.textMuted }}>{month}</div>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: colors.text, marginBottom: 4 }}>{event.title}</div>
-                  <div style={{ fontSize: 13, color: colors.textSecondary }}>
-                    {formatEventTime(event.start_datetime)}
-                    {event.location ? ` · ${event.location}` : ""}
-                    {event.max_participants != null ? ` · ${event.participants_count ?? 0}/${event.max_participants}` : ""}
-                  </div>
-                </div>
-                <span
+              <div key={event.event_id} style={{ borderBottom: `1px solid ${colors.borderLight}` }}>
+                {/* Рядок події */}
+                <div
                   style={{
-                    padding: "4px 10px",
-                    borderRadius: radius.pill,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    background: status.bg,
-                    color: status.color,
-                    whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    padding: "16px 24px",
                   }}
                 >
-                  {status.label}
-                </span>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button type="button" onClick={() => onNavigateToEvent?.(event)} style={iconBtnStyle} title="Редагувати">
-                    <IconEdit size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteEvent(event)}
-                    style={{ ...iconBtnStyle, color: colors.error }}
-                    title="Видалити"
+                  <div style={{ textAlign: "center", minWidth: 48 }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: colors.text, lineHeight: 1 }}>{day}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: colors.textMuted }}>{month}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: colors.text, marginBottom: 4 }}>{event.title}</div>
+                    <div style={{ fontSize: 13, color: colors.textSecondary }}>
+                      {formatEventTime(event.start_datetime)}
+                      {event.location ? ` · ${event.location}` : ""}
+                      {event.max_participants != null ? ` · ${event.participants_count ?? 0}/${event.max_participants}` : ""}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: radius.pill,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      background: status.bg,
+                      color: status.color,
+                      whiteSpace: "nowrap",
+                    }}
                   >
-                    <IconTrash size={16} color={colors.error} />
-                  </button>
+                    {status.label}
+                  </span>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isEditing) {
+                          setEditingEventId(null);
+                        } else {
+                          setEditingEventId(event.event_id);
+                          setEventEditForm({
+                            title: event.title || "",
+                            description: event.description || "",
+                            location: event.location || "",
+                            start_datetime: event.start_datetime?.slice(0, 16) || "",
+                            max_participants: event.max_participants || "",
+                          });
+                        }
+                      }}
+                      style={{
+                        ...iconBtnStyle,
+                        borderColor: isEditing ? colors.primary : colors.border,
+                        background: isEditing ? colors.primaryLight : colors.surface,
+                        color: isEditing ? colors.primary : colors.textSecondary,
+                      }}
+                      title="Редагувати"
+                    >
+                      <IconEdit size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEvent(event)}
+                      style={{ ...iconBtnStyle, color: colors.error }}
+                      title="Видалити"
+                    >
+                      <IconTrash size={16} color={colors.error} />
+                    </button>
+                  </div>
                 </div>
+
+                {/* Форма редагування події */}
+                {isEditing && (
+                  <div style={{ padding: "0 24px 20px 88px" }}>
+                    <div style={{ background: "#f8fafc", borderRadius: radius.md, padding: 20, border: `1px solid ${colors.borderLight}` }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+                        {[
+                          { label: "Назва", key: "title" },
+                          { label: "Місце", key: "location" },
+                        ].map(({ label, key }) => (
+                          <div key={key}>
+                            <label style={{ fontSize: 11, fontWeight: 700, color: colors.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6, fontFamily: fonts.body }}>
+                              {label}
+                            </label>
+                            <input
+                              value={eventEditForm[key] || ""}
+                              onChange={(e) => setEventEditForm((f) => ({ ...f, [key]: e.target.value }))}
+                              style={{ width: "100%", padding: "8px 12px", borderRadius: radius.md, fontSize: 14, border: `1.5px solid ${colors.border}`, outline: "none", fontFamily: fonts.body, boxSizing: "border-box" }}
+                            />
+                          </div>
+                        ))}
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: colors.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6, fontFamily: fonts.body }}>
+                            Дата і час
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={eventEditForm.start_datetime || ""}
+                            onChange={(e) => setEventEditForm((f) => ({ ...f, start_datetime: e.target.value }))}
+                            style={{ width: "100%", padding: "8px 12px", borderRadius: radius.md, fontSize: 14, border: `1.5px solid ${colors.border}`, outline: "none", fontFamily: fonts.body, boxSizing: "border-box" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: colors.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6, fontFamily: fonts.body }}>
+                            Макс. учасників
+                          </label>
+                          <input
+                            type="number"
+                            value={eventEditForm.max_participants || ""}
+                            onChange={(e) => setEventEditForm((f) => ({ ...f, max_participants: e.target.value ? parseInt(e.target.value) : null }))}
+                            style={{ width: "100%", padding: "8px 12px", borderRadius: radius.md, fontSize: 14, border: `1.5px solid ${colors.border}`, outline: "none", fontFamily: fonts.body, boxSizing: "border-box" }}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: colors.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: 6, fontFamily: fonts.body }}>
+                          Опис
+                        </label>
+                        <textarea
+                          value={eventEditForm.description || ""}
+                          onChange={(e) => setEventEditForm((f) => ({ ...f, description: e.target.value }))}
+                          rows={3}
+                          style={{ width: "100%", padding: "8px 12px", borderRadius: radius.md, fontSize: 14, border: `1.5px solid ${colors.border}`, outline: "none", fontFamily: fonts.body, resize: "vertical", boxSizing: "border-box" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEvent(event.event_id)}
+                          style={{ padding: "9px 20px", borderRadius: radius.md, fontSize: 13, fontWeight: 700, border: "none", background: colors.primary, color: colors.white, cursor: "pointer", fontFamily: fonts.body }}
+                        >
+                          Зберегти
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingEventId(null)}
+                          style={{ padding: "9px 20px", borderRadius: radius.md, fontSize: 13, fontWeight: 600, border: `1px solid ${colors.border}`, background: "none", color: colors.textSecondary, cursor: "pointer", fontFamily: fonts.body }}
+                        >
+                          Скасувати
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })
         )}
       </div>
 
+      {/* Форма редагування організації */}
       <div id="edit-form">
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20 }}>
           <div
@@ -440,21 +574,6 @@ export function AdminOrgEditPage({
           />
 
           <OrganizationFormFields form={form} setForm={setForm} showStatus={isAdminMode} />
-
-          {message && (
-            <div
-              style={{
-                padding: "12px 16px",
-                borderRadius: radius.md,
-                background: message.includes("збережено") ? colors.successBg : colors.errorBg,
-                color: message.includes("збережено") ? colors.success : colors.error,
-                fontSize: 13,
-                marginBottom: 20,
-              }}
-            >
-              {message}
-            </div>
-          )}
 
           <div style={{ display: "flex", gap: 12 }}>
             <button

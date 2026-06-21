@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { API } from "../api";
 import { colors, fonts, radius, shadows } from "../theme/tokens";
 import Field from "./Field";
+import { useToast } from "../context/ToastContext";
 
 export default function Modal({ page, onClose, onSuccess, onSwitchPage }) {
   const [form, setForm] = useState({ email: "", password: "", confirm: "" });
@@ -9,6 +10,7 @@ export default function Modal({ page, onClose, onSuccess, onSwitchPage }) {
   const [serverMsg, setServerMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const emailRef = useRef(null);
+  const showToast = useToast();
 
   useEffect(() => {
     setTimeout(() => emailRef.current?.focus(), 80);
@@ -51,8 +53,10 @@ export default function Modal({ page, onClose, onSuccess, onSwitchPage }) {
           localStorage.setItem("token", data.token);
           localStorage.setItem("email", data.email);
           onSuccess({ token: data.token, email: data.email });
+          showToast("Ласкаво просимо!", "success");
         } else {
           onSuccess(null);
+          showToast("Акаунт створено! Тепер увійди.", "success");
         }
         onClose();
       } else if (res.status === 409) {

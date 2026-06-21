@@ -9,16 +9,38 @@
 - Дем'янік Катерина
 - Сич Анастасія
 - Вікторія Рахманова
-- Кривич Вероніка
 
 ## Стек
 - Frontend: React + Vite
 - Backend: Python + FastAPI
 - БД: MySQL
 
-## Запуск (буде доповнено)
-Детальна інструкція по запуску буде додана після налаштування середовища.
-
+## Архітектура
+```
+┌──────────────────┐
+│   React (Vite)   │  ← фронтенд
+└────────┬─────────┘
+         │ HTTP
+         ▼
+┌──────────────────┐
+│  FastAPI Router  │  ← обробка запитів
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  Бізнес-логіка   │  ← ролі, JWT, валідація
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  SQLAlchemy ORM  │  ← read / write
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  MySQL (локально)│  ← база даних
+└──────────────────┘
+```
 
 ## Лінк на Kanban - дошку : 
 - https://sharing.clickup.com/90151427240/b/h/6-901523495375-2/cdd9136ae826d64
@@ -30,7 +52,7 @@ https://teams.microsoft.com/l/channel/19%3A8-ORD-ZbJA6oaPOudXHKJEjqDUr1jy3tV1lfs
 
  
 ##  Структура проєкту
- 
+
 ```
 Осередок/
 ├── backend/          # FastAPI сервер
@@ -38,8 +60,8 @@ https://teams.microsoft.com/l/channel/19%3A8-ORD-ZbJA6oaPOudXHKJEjqDUr1jy3tV1lfs
 │   ├── models.py     # SQLAlchemy моделі
 │   ├── schemas.py    # Pydantic схеми
 │   ├── database.py   # Підключення до БД
-│   ├── requirements.txt
-│   └── .env.example
+│   ├── roles.py       # Логіка ролей і прав доступу
+│   └── requirements.txt
 ├── frontend/         # React + Vite застосунок
 │   ├── src/
 │   │   ├── App.jsx
@@ -47,10 +69,12 @@ https://teams.microsoft.com/l/channel/19%3A8-ORD-ZbJA6oaPOudXHKJEjqDUr1jy3tV1lfs
 │   ├── package.json
 │   └── vite.config.js
 ├── db/
-│   └── init.sql      # SQL-скрипт ініціалізації БД
-└── requirements.txt  # Повний список залежностей
+│   ├── init.sql       # SQL-скрипт ініціалізації БД (основний спосіб засіяти дані)
+│   ├── migrations/    # інкрементальні міграції, накатуються автоматично при старті бекенду
+│   └── reload.sh      # перезаливає БД з нуля з init.sql
+└── .env.example       # шаблон змінних середовища (копіювати в backend/.env)
 ```
- 
+
 ---
  
 ##  Вимоги
@@ -58,104 +82,125 @@ https://teams.microsoft.com/l/channel/19%3A8-ORD-ZbJA6oaPOudXHKJEjqDUr1jy3tV1lfs
 - **Python** ≥ 3.10
 - **Node.js** ≥ 18
 - **MySQL** ≥ 8.0 
+
+
 ---
  
 ## Запуск проєкту
- 
+
 ### 1. Клонування репозиторію
- 
+
+Створіть пусту папку на своєму пристроїта відрийте термінал, вставте цю команду: 
+
 ```bash
-git clone <URL репозиторію>
-cd Осередок
+git clone https://github.com/Oseredok/oseredok.git
+cd oseredok
 ```
- 
+
 ---
- 
+
 ### 2. Налаштування бази даних (MySQL)
- 
-#### локальний MySQL
- 
-Увійдіть у MySQL і виконайте скрипт ініціалізації:
- 
+
+відкрийте новий термінал та в ньому: 
+
 ```bash
-mysql -u root -p < db/init.sql
+cd oseredok"
 ```
- 
- 
-### 3. Запуск бекенду (FastAPI)
- 
-#### 3.1. Перейдіть у папку `backend`
- 
+
 ```bash
+mysql -u root -e "DROP DATABASE IF EXISTS student_orgs;"
+```
+
+```bash
+mysql -u root < db/init.sql
+```
+
+
+Щоб перезалити базу з нуля в майбутньому! (видалить усі дані і поверне тестовий набір): НЕ РОБІТЬ ЦЕ ЗАРАЗ бо все працюватиме і так, всі необхідні кроки вже виконано
+
+```bash
+./db/reload.sh
+```
+
+якщо все пройшло без помилок - база залита успішно і щоб перевірити чи дані реально там виконайте: 
+
+```bash
+mysql -u root student_orgs -e "SELECT COUNT(*) AS organizations FROM organizations; SELECT COUNT(*) AS users FROM users; SELECT COUNT(*) AS events FROM events;"
+```
+
+Після цього в базі вже є тестові користувачі:
+
+| Email | Роль |
+|---|---|
+| `admin@ukma.edu.ua` | admin | password123
+| `o.lytvyn@ukma.edu.ua` | org_owner | password123
+| `mykhailo@ukma.edu.ua` | student | password123
+
+---
+
+### 3. Запуск бекенду (FastAPI)
+
+#### 3.1. Відкрийте новий термінал та перейдіть у папку `backend`
+
+```bash
+cd oseredok
 cd backend
 ```
- 
+
 #### 3.2. Створіть і активуйте віртуальне середовище
- 
+
 ```bash
 # macOS / Linux
 python3 -m venv venv
 source venv/bin/activate
- 
+
 # Windows
 python -m venv venv
 venv\Scripts\activate
 ```
- 
+
 #### 3.3. Встановіть залежності
- 
-> Використовуйте `requirements.txt` з кореня проєкту — він містить усі потрібні пакети (`passlib[bcrypt]`, `email-validator`).
- 
+
 ```bash
-pip install -r ../requirements.txt
+pip install -r requirements.txt
 ```
- 
+
 #### 3.4. Налаштуйте змінні середовища
- 
-Скопіюйте приклад і заповніть своїми даними:
- 
+
+Скопіюйте приклад із кореня проєкту:
+
 ```bash
-cp .env.example .env
+cp ../.env.example .env
 ```
- 
+
 Відредагуйте `.env`:
- 
+
 ```env
-DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@localhost/student_orgs
+DATABASE_URL=mysql+pymysql://root@localhost/student_orgs
 ```
- 
+
 #### 3.5. Запустіть сервер
- 
+
 ```bash
 uvicorn main:app --reload
 ```
- 
+
 Бекенд буде доступний за адресою: **http://127.0.0.1:8000**
- 
 Інтерактивна документація API: **http://127.0.0.1:8000/docs**
- 
+
 ---
- 
+
 ### 4. Запуск фронтенду (React + Vite)
- 
+
 Відкрийте **новий термінал** і перейдіть у папку `frontend`:
- 
+
 ```bash
+cd oseredok
 cd frontend
-```
- 
-#### 4.1. Встановіть залежності Node.js
- 
-```bash
 npm install
-```
- 
-#### 4.2. Запустіть dev-сервер
- 
-```bash
 npm run dev
 ```
- 
+
 Фронтенд буде доступний за адресою: **http://localhost:5173**
  
 ---
