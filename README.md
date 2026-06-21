@@ -94,7 +94,7 @@ mysql -u root < db/init.sql
 ./db/reload.sh
 ```
 
-якщо все пройшло без помилок - база залита успішноЮ щоб перевірити чи дані реально там виконайте: 
+якщо все пройшло без помилок - база залита успішно і щоб перевірити чи дані реально там виконайте: 
 
 ```bash
 mysql -u root student_orgs -e "SELECT COUNT(*) AS organizations FROM organizations; SELECT COUNT(*) AS users FROM users; SELECT COUNT(*) AS events FROM events;"
