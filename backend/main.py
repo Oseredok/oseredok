@@ -111,14 +111,10 @@ def get_current_user(authorization: str = Header(...), db: Session = Depends(get
     return user
 
 
-# --- Root ---
-
 @app.get("/")
 def root():
     return {"message": "Backend is running"}
 
-
-# --- Organizations ---
 
 @app.get("/organizations")
 def get_organizations(
@@ -247,8 +243,6 @@ def create_organization(
     }
 
 
-# --- Events ---
-
 @app.get("/events")
 def get_events(
     search: str | None = Query(default=None),
@@ -365,8 +359,6 @@ def create_event(
     }
 
 
-# --- Реєстрація на подію ---
-
 @app.post("/events/{event_id}/register", response_model=RegistrationResponse)
 def register_for_event(
     event_id: str,
@@ -430,8 +422,6 @@ def cancel_registration(
     db.commit()
     return {"message": "Реєстрацію скасовано"}
 
-
-# --- Профіль ---
 
 @app.get("/users/search")
 def search_users(
@@ -542,8 +532,6 @@ def get_my_registrations(
     ]
 
 
-# --- Auth ---
-
 @app.post("/auth/register", status_code=201, response_model=UserRegisterResponse)
 def register(body: UserRegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == body.email).first()
@@ -574,7 +562,6 @@ def login(body: UserLoginRequest, db: Session = Depends(get_db)):
     return TokenResponse(token=token, userId=user.user_id, email=user.email)
 
 
-# Отримати всіх користувачів
 @app.get("/users")
 def get_all_users(
     db: Session = Depends(get_db),
@@ -597,7 +584,6 @@ def get_all_users(
     ]
 
 
-# Видалити користувача
 @app.delete("/users/{user_id}")
 def delete_user(
     user_id: str,
@@ -620,7 +606,6 @@ def delete_user(
     return {"message": "Користувача видалено"}
 
 
-# Створити користувача (адмін)
 @app.post("/users", status_code=201)
 def create_user(
     body: dict,

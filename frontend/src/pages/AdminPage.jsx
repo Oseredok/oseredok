@@ -169,7 +169,7 @@ export function AdminPage({ user, onCreateOrg, onEditOrg, onNavigateToOrg }) {
     </div>
   );
 
-// ================= USERS TAB =================
+// USERS TAB 
 if (activeTab === "users") {
   return (
     <div style={{ animation: "fadeUp 0.5s ease both" }}>
@@ -270,7 +270,7 @@ if (activeTab === "users") {
   );
 }
 
-  // ── Orgs tab ───────────────────────────────────────────────────
+  // Orgs tab 
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: 80, color: colors.textMuted, fontFamily: fonts.body }}>
