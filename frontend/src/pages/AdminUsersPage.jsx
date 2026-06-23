@@ -89,7 +89,6 @@ const labelStyle = {
   fontFamily: fonts.body,
 };
 
-// ── Modal ──────────────────────────────────────────────────────
 function Modal({ title, onClose, children }) {
   return (
     <div
@@ -131,7 +130,6 @@ function Modal({ title, onClose, children }) {
   );
 }
 
-// ── Create user modal ──────────────────────────────────────────
 function CreateUserModal({ onClose, onSuccess, token }) {
   const [form, setForm] = useState({ email: "", password: "", full_name: "", role: "student", faculty: "" });
   const [loading, setLoading] = useState(false);
@@ -213,7 +211,6 @@ function CreateUserModal({ onClose, onSuccess, token }) {
   );
 }
 
-// ── Main page ──────────────────────────────────────────────────
 
 export default function AdminUsersPage({ user, onRef }) {
   const [users, setUsers] = useState([]);
