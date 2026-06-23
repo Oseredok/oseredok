@@ -162,7 +162,7 @@ https://teams.microsoft.com/l/channel/19%3A8-ORD-ZbJA6oaPOudXHKJEjqDUr1jy3tV1lfs
 
 ### 1. Клонування репозиторію
 
-Створіть пусту папку на своєму пристроїта відрийте термінал, вставте цю команду: 
+Відкрийте термінал і виконайте команду - папка `oseredok` створюється автоматично, вручну її створювати не потрібно:
 
 ```bash
 git clone https://github.com/Oseredok/oseredok.git
@@ -173,40 +173,58 @@ cd oseredok
 
 ### 2. Налаштування бази даних (MySQL)
 
-відкрийте новий термінал та в ньому: 
+Відкрийте **новий термінал** і перейдіть у папку проєкту:
 
 ```bash
-cd oseredok"
+cd oseredok
 ```
 
+Видаліть стару базу (якщо була) і залийте нову з тестовими даними:
+
 ```bash
+# macOS / Linux
 mysql -u root -e "DROP DATABASE IF EXISTS student_orgs;"
+mysql -u root --default-character-set=utf8mb4 < db/init.sql
+
+# Windows (CMD) - якщо mysql не розпізнається, вкажіть повний шлях:
+"C:\Program Files\MySQL\MySQL Server 9.7\bin\mysql" -u root -p -e "DROP DATABASE IF EXISTS student_orgs;"
+"C:\Program Files\MySQL\MySQL Server 9.7\bin\mysql" -u root -p --default-character-set=utf8mb4 < db/init.sql
 ```
+> **Примітка для Windows:** якщо команда `mysql` не розпізнається - вкажіть повний шлях до виконуваного файлу. Версія може відрізнятись (наприклад, `MySQL Server 8.0` або `9.7`) - перевірте яка у вас встановлена в `C:\Program Files\MySQL\`.
+> Якщо MySQL встановлений з паролем - додайте `-p` після `-u root`, термінал запитає пароль.
+
+> **Важливо:** обов'язково використовуйте `--default-character-set=utf8mb4` щоб кирилиця в даних відображалась коректно.
+
+Перевірте що дані залились успішно:
 
 ```bash
-mysql -u root < db/init.sql
-```
-
-
-Щоб перезалити базу з нуля в майбутньому! (видалить усі дані і поверне тестовий набір): НЕ РОБІТЬ ЦЕ ЗАРАЗ бо все працюватиме і так, всі необхідні кроки вже виконано
-
-```bash
-./db/reload.sh
-```
-
-якщо все пройшло без помилок - база залита успішно і щоб перевірити чи дані реально там виконайте: 
-
-```bash
+# macOS / Linux
 mysql -u root student_orgs -e "SELECT COUNT(*) AS organizations FROM organizations; SELECT COUNT(*) AS users FROM users; SELECT COUNT(*) AS events FROM events;"
+
+# Windows
+"C:\Program Files\MySQL\MySQL Server 9.7\bin\mysql" -u root -p student_orgs -e "SELECT COUNT(*) AS organizations FROM organizations; SELECT COUNT(*) AS users FROM users; SELECT COUNT(*) AS events FROM events;"
 ```
 
-Після цього в базі вже є тестові користувачі:
+Якщо бачите числа більше нуля - база готова.
 
-| Email | Роль |
-|---|---|
-| `admin@ukma.edu.ua` | admin | password123
-| `o.lytvyn@ukma.edu.ua` | org_owner | password123
-| `mykhailo@ukma.edu.ua` | student | password123
+Щоб перезалити базу з нуля в майбутньому (видалить усі дані і поверне тестовий набір):
+
+```bash
+# macOS / Linux
+./db/reload.sh
+
+# Windows - виконайте ці дві команди вручну:
+"C:\Program Files\MySQL\MySQL Server 9.7\bin\mysql" -u root -p -e "DROP DATABASE IF EXISTS student_orgs;"
+"C:\Program Files\MySQL\MySQL Server 9.7\bin\mysql" -u root -p --default-character-set=utf8mb4 < db/init.sql
+```
+
+В базі вже є тестові користувачі:
+
+| Email | Роль | Пароль |
+|---|---|---|
+| `admin@ukma.edu.ua` | admin | password123 |
+| `o.lytvyn@ukma.edu.ua` | org_owner | password123 |
+| `mykhailo@ukma.edu.ua` | student | password123 |
 
 ---
 
@@ -231,6 +249,8 @@ python -m venv venv
 venv\Scripts\activate
 ```
 
+Після активації на початку рядка терміналу має з'явитись `(venv)`.
+
 #### 3.3. Встановіть залежності
 
 ```bash
@@ -240,16 +260,33 @@ pip install -r requirements.txt
 #### 3.4. Налаштуйте змінні середовища
 
 Скопіюйте приклад із кореня проєкту:
-
 ```bash
+# macOS / Linux
 cp ../.env.example .env
+
+# Windows (CMD)
+copy ..\.env.example .env
 ```
 
-Відредагуйте `.env`:
+
+Відредагуйте `.env` - якщо MySQL встановлений **без пароля**:
 
 ```env
 DATABASE_URL=mysql+pymysql://root@localhost/student_orgs
 ```
+
+Якщо MySQL встановлений **з паролем** - додайте його після `root:`:
+
+```env
+DATABASE_URL=mysql+pymysql://root:ВАШ_ПАРОЛЬ@localhost/student_orgs
+```
+
+> **Примітка для Windows:** файл зручно відредагувати командою `notepad .env` або відкрити в VS Code. Переконайтесь що файл збережено після редагування (`Ctrl+S`). Якщо редактор не зберігає зміни - перезапишіть файл через термінал:
+> ```
+> echo DATABASE_URL=mysql+pymysql://root:ВАШ_ПАРОЛЬ@localhost/student_orgs> .env
+> echo JWT_SECRET=your_secret_key_here>> .env
+> echo PORT=3000>> .env
+> ```
 
 #### 3.5. Запустіть сервер
 
