@@ -1,8 +1,4 @@
-import pytest
-from database import Base, engine
+import os
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+os.environ.setdefault("JWT_SECRET", "test-secret")

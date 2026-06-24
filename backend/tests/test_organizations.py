@@ -1,13 +1,27 @@
-
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from database import Base, engine, SessionLocal
+from database import Base, get_db
 from main import app, hash_password
 from models import Organization, OrganizationMember, User
 import uuid
 from datetime import datetime
 
+engine = create_engine("sqlite:///./test.db", connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(bind=engine)
+
+
+def override_get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
@@ -169,7 +183,6 @@ class TestGetOrganization:
         resp = client.get("/organizations/does-not-exist")
         assert resp.status_code == 404
         assert "не знайдено" in resp.json()["detail"]
-
 
 
 class TestUpdateOrganization:
