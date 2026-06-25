@@ -2,6 +2,8 @@
 source = .
 omit =
     tests/*
+    */tests/*
+    */test_*.py
     venv/*
     .venv/*
     seed_data.py

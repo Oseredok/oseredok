@@ -19,6 +19,8 @@ flags:
   backend:
     paths:
       - backend/
+    ignore:
+      - backend/tests/
   frontend:
     paths:
       - frontend/src/
