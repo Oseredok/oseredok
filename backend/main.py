@@ -260,6 +260,7 @@ def get_events(
     if organization_id:
         query = query.filter(Event.organization_id == organization_id)
 
+    query = query.filter(Event.start_datetime >= datetime.utcnow())
     results = query.order_by(Event.start_datetime).all()
 
     events = []
