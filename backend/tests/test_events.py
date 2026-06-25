@@ -140,6 +140,15 @@ class TestGetEvents:
         resp = client.get("/events?search=nonexistent_xyz")
         assert resp.status_code == 200
         assert resp.json() == []
+    
+    def test_category_filter(self):
+        org = _create_org(category="Art")
+        _create_event(org.organization_id, "Art Event")
+        org2 = _create_org("Org2", "org2", category="Science")
+        _create_event(org2.organization_id, "Science Event")
+        resp = client.get("/events?category=Art")
+        assert resp.status_code == 200
+        assert all(e["category"] == "Art" for e in resp.json())
 
 
 class TestGetEvent:
