@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { API } from "../api";
 import { colors, fonts, radius } from "../theme/tokens";
 import { useToast } from "../context/ToastContext";
+import { minDatetimeLocal, parseApiError, validateEventDatetimes } from "../utils/eventForm";
 
 export function CreateEventPage({ user, onSuccess }) {
   const [organizations, setOrganizations] = useState([]);
@@ -43,6 +44,13 @@ export function CreateEventPage({ user, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const validationError = validateEventDatetimes(formData.start_datetime, formData.end_datetime);
+    if (validationError) {
+      showToast(validationError, "error");
+      return;
+    }
+
     setSubmitting(true);
 
     const token = localStorage.getItem("token");
@@ -73,10 +81,13 @@ export function CreateEventPage({ user, onSuccess }) {
         setTimeout(() => {
           onSuccess?.();
         }, 1500);
-      } else if (res.status === 404) {
-        showToast("Організацію не знайдено", "error");
       } else {
-        showToast("Помилка при створенні події", "error");
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 404) {
+          showToast("Організацію не знайдено", "error");
+        } else {
+          showToast(parseApiError(data, "Помилка при створенні події"), "error");
+        }
       }
     } catch (error) {
       showToast("Немає зв'язку з сервером", "error");
@@ -234,6 +245,7 @@ export function CreateEventPage({ user, onSuccess }) {
                 name="start_datetime"
                 value={formData.start_datetime}
                 onChange={handleInputChange}
+                min={minDatetimeLocal()}
                 required
                 style={{
                   width: "100%",
@@ -256,6 +268,7 @@ export function CreateEventPage({ user, onSuccess }) {
                 name="end_datetime"
                 value={formData.end_datetime}
                 onChange={handleInputChange}
+                min={formData.start_datetime || minDatetimeLocal()}
                 required
                 style={{
                   width: "100%",

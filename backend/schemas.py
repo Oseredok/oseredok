@@ -1,5 +1,12 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
 from datetime import datetime
+
+
+def validate_event_datetimes(start: datetime, end: datetime, *, allow_past_start: bool = False) -> None:
+    if not allow_past_start and start < datetime.utcnow():
+        raise ValueError("Дата початку не може бути в минулому")
+    if end <= start:
+        raise ValueError("Дата закінчення має бути після дати початку")
 
 
 class OrganizationResponse(BaseModel):
@@ -97,4 +104,18 @@ class EventCreateRequest(BaseModel):
     location: str | None = None
     start_datetime: datetime
     end_datetime: datetime
+    max_participants: int | None = None
+
+    @model_validator(mode="after")
+    def check_datetimes(self):
+        validate_event_datetimes(self.start_datetime, self.end_datetime)
+        return self
+
+
+class EventUpdateRequest(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    location: str | None = None
+    start_datetime: datetime | None = None
+    end_datetime: datetime | None = None
     max_participants: int | None = None
