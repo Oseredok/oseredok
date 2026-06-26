@@ -327,19 +327,6 @@ export default function ProfilePage({ user, onNavigateToEvent, onNavigate }) {
             <DataRow label="Рік навчання" value="—" muted />
           </div>
         )}
-
-        {message && (
-          <p
-            style={{
-              marginTop: 16,
-              fontSize: 13,
-              color: message.includes("збережено") ? colors.success : colors.error,
-              fontFamily: fonts.body,
-            }}
-          >
-            {message}
-          </p>
-        )}
       </div>
 
       {/* My events */}

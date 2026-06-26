@@ -15,7 +15,8 @@ from schemas import (
     UserLoginRequest, TokenResponse,
     UserProfileResponse, RegistrationResponse,
     UserUpdateRequest, OrganizationCreateRequest,
-    OrganizationUpdateRequest, EventCreateRequest
+    OrganizationUpdateRequest, EventCreateRequest, EventUpdateRequest,
+    validate_event_datetimes,
 )
 from roles import is_admin, can_create_events, can_manage_organization
 
@@ -260,6 +261,7 @@ def get_events(
     if organization_id:
         query = query.filter(Event.organization_id == organization_id)
 
+    query = query.filter(Event.start_datetime >= datetime.utcnow())
     results = query.order_by(Event.start_datetime).all()
 
     events = []
@@ -695,7 +697,7 @@ def get_event_participants(
 @app.patch("/events/{event_id}")
 def update_event(
     event_id: str,
-    body: dict,
+    body: EventUpdateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -712,10 +714,23 @@ def update_event(
         if not membership:
             raise HTTPException(status_code=403, detail="Доступ заборонено")
 
-    allowed = ["title", "description", "location", "start_datetime", "end_datetime", "max_participants"]
-    for key, value in body.items():
-        if key in allowed:
-            setattr(event, key, value)
+    updates = body.model_dump(exclude_unset=True)
+    start = updates.get("start_datetime", event.start_datetime)
+    end = updates.get("end_datetime", event.end_datetime)
+    event_already_past = event.start_datetime and event.start_datetime < datetime.utcnow()
+    changing_start = "start_datetime" in updates
+
+    try:
+        validate_event_datetimes(
+            start,
+            end,
+            allow_past_start=event_already_past and not changing_start,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    for key, value in updates.items():
+        setattr(event, key, value)
 
     db.commit()
     db.refresh(event)

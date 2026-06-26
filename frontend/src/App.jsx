@@ -173,7 +173,7 @@ function AppInner() {
         {view === "org-detail" && selectedOrg && (
           <OrgDetailPage
             org={selectedOrg}
-            onBack={() => navigate("organizations")}
+            onBack={() => navigate(user ? "organizations" : "home")}
             onNavigateToEvent={navigateToEvent}
           />
         )}

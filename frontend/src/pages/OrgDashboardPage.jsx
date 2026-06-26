@@ -5,6 +5,7 @@ import { IconX } from "../components/ui/Icons";
 import OrganizationFormFields from "../components/admin/OrganizationFormFields";
 import LogoUploadField from "../components/LogoUploadField";
 import { emptyForm, fileToDataUrl } from "../utils/orgForm";
+import { parseApiError, validateEventDatetimes } from "../utils/eventForm";
 import { categoryColors, colors, fonts, radius, shadows } from "../theme/tokens";
 import { useToast } from "../context/ToastContext";
 
@@ -131,21 +132,36 @@ export function OrgDashboardPage({ user, onNavigate }) {
     setIsEditingOrg(false);
   };
 
-  const handleSaveEvent = (eventId) => {
-    fetch(`${API}/events/${eventId}`, {
-      method: "PATCH",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify(eventEditForm),
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(updated => {
-        if (updated) {
-          setEvents(prev => prev.map(e => e.event_id === eventId ? { ...e, ...updated } : e));
-          setEditingEventId(null);
-          showToast("Подію збережено", "success");
-        }
-      })
-      .catch(() => showToast("Помилка збереження події", "error"));
+  const handleSaveEvent = async (eventId) => {
+    const current = events.find((e) => e.event_id === eventId);
+    const start = eventEditForm.start_datetime ?? current?.start_datetime?.slice(0, 16);
+    const end = eventEditForm.end_datetime ?? current?.end_datetime?.slice(0, 16);
+
+    const validationError = validateEventDatetimes(start, end || start);
+    if (validationError && current && new Date(current.start_datetime) >= new Date()) {
+      showToast(validationError, "error");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/events/${eventId}`, {
+        method: "PATCH",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify(eventEditForm),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setEvents((prev) => prev.map((e) => (e.event_id === eventId ? { ...e, ...updated } : e)));
+        setEditingEventId(null);
+        showToast("Подію збережено", "success");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(parseApiError(data, "Помилка збереження події"), "error");
+      }
+    } catch {
+      showToast("Помилка збереження події", "error");
+    }
   };
 
   const now = new Date();
